@@ -35,5 +35,5 @@ private:
     Texture2D texture_; // raylib 上传到显存的完整 96×256 双帧纹理
 
     static constexpr int FRAME_COUNT = 2; // 素材沿竖直方向依次排列两帧
-    static constexpr bool SOURCE_FACES_RIGHT = false; // 原始素材人物面向左侧
+    static constexpr bool SOURCE_FACES_RIGHT = true; // 原始素材人物面向右侧
 };
