@@ -49,19 +49,21 @@ endif()
 # ============================================================
 
 set(GAME_DOMAIN_SOURCES
-    src/character.cpp
-    src/combat_system.cpp
-    src/player.cpp
-    src/player_controller.cpp
-    src/player_shadow.cpp
-    src/player_sprite_renderer.cpp
-    src/platform_system.cpp
-    src/shadow_manager.cpp
-    src/enemy.cpp
-    src/melee_enemy.cpp
-    src/ranged_enemy.cpp
-    src/projectile_system.cpp
-    src/item.cpp
+    src/entities/character.cpp
+    src/entities/enemy.cpp
+    src/entities/item.cpp
+    src/entities/melee_enemy.cpp
+    src/entities/player.cpp
+    src/entities/player_shadow.cpp
+    src/entities/ranged_enemy.cpp
+    src/input/player_controller.cpp
+    src/rendering/character_renderer.cpp
+    src/rendering/hud_renderer.cpp
+    src/rendering/player_sprite_renderer.cpp
+    src/systems/combat_system.cpp
+    src/systems/platform_system.cpp
+    src/systems/projectile_system.cpp
+    src/systems/shadow_manager.cpp
 )
 
 add_library(game_domain ${GAME_DOMAIN_SOURCES})
@@ -73,12 +75,29 @@ target_include_directories(game_domain PUBLIC
 )
 
 # ============================================================
+# Engine and scenes
+# ============================================================
+
+add_library(game_app
+    src/engine/game_engine.cpp
+    src/scenes/game_scene.cpp
+)
+
+target_link_libraries(game_app PUBLIC
+    game_domain
+    raylib
+)
+
+target_include_directories(game_app PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+# ============================================================
 # Main executable
 # ============================================================
 
 add_executable(I_HAVE_A_DREAM
     src/main.cpp
-    src/scene.cpp
 )
 
 # Keep the executable directly in build/ for both single- and multi-config
@@ -92,8 +111,7 @@ set_target_properties(I_HAVE_A_DREAM PROPERTIES
 )
 
 target_link_libraries(I_HAVE_A_DREAM PRIVATE
-    game_domain
-    raylib
+    game_app
 )
 
 # 将资源复制到可执行文件旁边，使从 build/ 目录直接运行时也能找到素材。
@@ -116,6 +134,7 @@ function(enable_project_warnings target)
 endfunction()
 
 enable_project_warnings(game_domain)
+enable_project_warnings(game_app)
 enable_project_warnings(I_HAVE_A_DREAM)
 
 # macOS frameworks needed by raylib
@@ -177,15 +196,11 @@ if(ENABLE_TESTS)
         )
     endif()
 
-    add_executable(game_tests
-        ${TEST_SOURCES}
-        src/scene.cpp
-    )
+    add_executable(game_tests ${TEST_SOURCES})
 
     target_link_libraries(game_tests PRIVATE
-        game_domain
+        game_app
         GTest::gtest_main
-        raylib
     )
 
     enable_project_warnings(game_tests)

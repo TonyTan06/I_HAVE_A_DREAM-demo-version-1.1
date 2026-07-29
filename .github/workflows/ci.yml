@@ -37,7 +37,7 @@ jobs:
           libgl1-mesa-dev
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=ON
 
       - name: Build
         run: cmake --build build --config Release

@@ -1,5 +1,5 @@
-#include "player.h"
-#include "ranged_enemy.h"
+#include "entities/player.h"
+#include "entities/ranged_enemy.h"
 
 #include <gtest/gtest.h>
 
