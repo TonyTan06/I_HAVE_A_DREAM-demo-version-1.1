@@ -1,6 +1,7 @@
 #include "shadow_manager.h"
 
 #include "player.h"
+#include "player_sprite_renderer.h"
 
 #include <algorithm>
 #include <cmath>
@@ -10,6 +11,7 @@ ShadowManager::ShadowManager(const Player& player)
       recordedPlayerX_(player.getX()),
       recordedPlayerY_(player.getY()),
       previousPlayerX_(player.getX()),
+      recordedFacingRight_(player.isFacingRight()),
       accumulatedHorizontalDistance_(0.0F),
       elapsedLifetime_(0.0F) {
 }
@@ -32,6 +34,7 @@ void ShadowManager::update(const Player& player, float deltaTime) {
             shadow_.reset();
             recordedPlayerX_ = player.getX();
             recordedPlayerY_ = player.getY();
+            recordedFacingRight_ = player.isFacingRight();
             accumulatedHorizontalDistance_ = 0.0F;
             elapsedLifetime_ = 0.0F;
         }
@@ -55,32 +58,40 @@ void ShadowManager::update(const Player& player, float deltaTime) {
 void ShadowManager::resetPlayerTracking(const Player& player) {
     // 复活或传送后同步上一帧位置，避免把瞬移距离误算为移动进度。
     previousPlayerX_ = player.getX();
+    recordedPlayerX_ = player.getX();
+    recordedPlayerY_ = player.getY();
+    recordedFacingRight_ = player.isFacingRight();
     accumulatedHorizontalDistance_ = 0.0F;
 }
 
 void ShadowManager::draw(
-    float platformY, float entityWidth, float entityHeight) const {
+    float platformY, const PlayerSpriteRenderer& spriteRenderer) const {
     if (!shadow_.has_value()) {
-        // 尚未生成时显示半透明记录点预览模型。
-        DrawRectangle(static_cast<int>(recordedPlayerX_),
-                      static_cast<int>(platformY - entityHeight - recordedPlayerY_),
-                      static_cast<int>(entityWidth), static_cast<int>(entityHeight),
-                      Color{120, 170, 255, 80});
+        // 尚未生成时显示站立帧的半透明记录点模型。
+        spriteRenderer.drawAt(
+            recordedPlayerX_,
+            recordedPlayerY_,
+            Player::SPRITE_FRAME_WIDTH,
+            Player::SPRITE_FRAME_HEIGHT,
+            false,
+            recordedFacingRight_,
+            platformY,
+            Color{120, 170, 255, 80});
         return;
     }
 
     const Rectangle hitbox{
-        shadow_->getX(), platformY - entityHeight - shadow_->getY(),
-        entityWidth, entityHeight};
+        shadow_->getX(),
+        platformY - shadow_->getHitboxHeight() - shadow_->getY(),
+        shadow_->getHitboxWidth(),
+        shadow_->getHitboxHeight()};
     const float timeRatio = 1.0F - elapsedLifetime_ / LIFETIME;
     const int barX = static_cast<int>(hitbox.x);
     const int timeBarY = static_cast<int>(hitbox.y - 11.0F);
-    const int barWidth = static_cast<int>(entityWidth);
+    const int barWidth = static_cast<int>(shadow_->getHitboxWidth());
 
-    // 影子本体仍显示实体碰撞框，但没有血量条；顶部只绘制绿色剩余时间条。
-    DrawRectangle(static_cast<int>(hitbox.x), static_cast<int>(hitbox.y),
-                  static_cast<int>(entityWidth), static_cast<int>(entityHeight),
-                  Color{72, 183, 255, 100});
+    // 影子复用玩家当前姿势；随后叠加原有红色碰撞箱和绿色存在时间条。
+    spriteRenderer.draw(*shadow_, platformY, Color{150, 190, 255, 150});
     DrawRectangleRec(hitbox, Color{255, 100, 100, 60});
     DrawRectangleLinesEx(hitbox, 2.0F, RED);
     DrawRectangle(barX, timeBarY, barWidth, 4, DARKGRAY);

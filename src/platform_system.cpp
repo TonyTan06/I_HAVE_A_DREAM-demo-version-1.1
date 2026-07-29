@@ -18,14 +18,14 @@ void PlatformSystem::draw(Color color) const {
 }
 
 void PlatformSystem::updateCharacterSupport(
-    Character& character, float groundY, float characterWidth) const {
+    Character& character, float groundY) const {
     if (!character.isGrounded() || character.getY() <= 0.0F) return;
 
     const bool stillSupported = std::any_of(
         platforms_.begin(), platforms_.end(), [&](const Rectangle& platform) {
             const float platformHeight = groundY - platform.y;
             return std::abs(character.getY() - platformHeight) <= 0.01F &&
-                overlapsHorizontally(character, characterWidth, platform);
+                overlapsHorizontally(character, platform);
         });
     if (!stillSupported) {
         character.beginFalling();
@@ -34,12 +34,12 @@ void PlatformSystem::updateCharacterSupport(
 
 void PlatformSystem::resolveCharacterLanding(
     Character& character, float previousHeight,
-    float groundY, float characterWidth) const {
+    float groundY) const {
     if (character.isGrounded()) return;
 
     float landingHeight = -1.0F; // 本帧穿过的最高平台顶面相对地面的高度
     for (const Rectangle& platform : platforms_) {
-        if (!overlapsHorizontally(character, characterWidth, platform)) continue;
+        if (!overlapsHorizontally(character, platform)) continue;
 
         const float platformHeight = groundY - platform.y;
         const bool crossedTopWhileFalling =
@@ -59,10 +59,9 @@ const std::vector<Rectangle>& PlatformSystem::getPlatforms() const {
 }
 
 bool PlatformSystem::overlapsHorizontally(
-    const Character& character, float characterWidth,
-    const Rectangle& platform) {
+    const Character& character, const Rectangle& platform) {
     const float characterLeft = character.getX();
-    const float characterRight = characterLeft + characterWidth;
+    const float characterRight = characterLeft + character.getHitboxWidth();
     const float platformRight = platform.x + platform.width;
     return characterRight > platform.x && characterLeft < platformRight;
 }

@@ -7,6 +7,8 @@ TEST(CharacterTest, StartsAliveAndUsesDefaultGravityScale) {
 
     EXPECT_TRUE(character.isAlive());
     EXPECT_FLOAT_EQ(character.getGravityScale(), 1.0F);
+    EXPECT_FLOAT_EQ(character.getHitboxWidth(), 32.0F);
+    EXPECT_FLOAT_EQ(character.getHitboxHeight(), 48.0F);
 }
 
 TEST(CharacterTest, RejectsNegativeGravityScale) {

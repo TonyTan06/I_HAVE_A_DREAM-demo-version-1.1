@@ -54,6 +54,7 @@ set(GAME_DOMAIN_SOURCES
     src/player.cpp
     src/player_controller.cpp
     src/player_shadow.cpp
+    src/player_sprite_renderer.cpp
     src/platform_system.cpp
     src/shadow_manager.cpp
     src/enemy.cpp
@@ -93,6 +94,13 @@ set_target_properties(I_HAVE_A_DREAM PROPERTIES
 target_link_libraries(I_HAVE_A_DREAM PRIVATE
     game_domain
     raylib
+)
+
+# 将资源复制到可执行文件旁边，使从 build/ 目录直接运行时也能找到素材。
+add_custom_command(TARGET I_HAVE_A_DREAM POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+        "$<TARGET_FILE_DIR:I_HAVE_A_DREAM>/assets"
 )
 
 # ============================================================

@@ -14,6 +14,8 @@ Character::Character(std::string name)
       attackDamage_(0.0F),
       attacksPerSecond_(0.0F),
       shield_(0.0F),
+      hitboxWidth_(32.0F),
+      hitboxHeight_(48.0F),
       jumpInitialVelocity_(0.0F),
       verticalVelocity_(0.0F),
       gravityScale_(1.0F),
@@ -77,6 +79,14 @@ float Character::getX() const {
 
 float Character::getY() const {
     return y_;
+}
+
+float Character::getHitboxWidth() const {
+    return hitboxWidth_;
+}
+
+float Character::getHitboxHeight() const {
+    return hitboxHeight_;
 }
 
 void Character::setPosition(float x, float y) {
@@ -157,6 +167,13 @@ void Character::setGravityScale(float gravityScale) {
 
     gravityScale_ = gravityScale;
 } //设置角色自身重力倍率
+
+void Character::setHitboxSize(float width, float height) {
+    if (width <= 0.0F || height <= 0.0F) return;
+
+    hitboxWidth_ = width;
+    hitboxHeight_ = height;
+}
 
 void Character::update(float deltaTime) {
     if (!isAlive()) return;

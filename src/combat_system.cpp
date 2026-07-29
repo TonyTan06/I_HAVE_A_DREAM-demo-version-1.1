@@ -2,11 +2,8 @@
 
 #include <cmath>
 
-CombatSystem::CombatSystem(float entityWidth, float entityHeight, float attackRange,
-                           float defenseRange)
-    : entityWidth_(entityWidth),
-      entityHeight_(entityHeight),
-      attackRange_(attackRange),
+CombatSystem::CombatSystem(float attackRange, float defenseRange)
+    : attackRange_(attackRange),
       defenseRange_(defenseRange) {
 }
 
@@ -92,28 +89,34 @@ CombatSystem::AttackResult CombatSystem::enemyMeleeAttack(
 Rectangle CombatSystem::makeCharacterHitbox(
     const Character& character, float platformY) const {
     return Rectangle{
-        character.getX(), platformY - entityHeight_ - character.getY(),
-        entityWidth_, entityHeight_};
+        character.getX(),
+        platformY - character.getHitboxHeight() - character.getY(),
+        character.getHitboxWidth(),
+        character.getHitboxHeight()};
 }
 
 Rectangle CombatSystem::makeMeleeAttackHitbox(
     const Character& attacker, bool facingRight, float platformY) const {
     const float attackX = facingRight
-        ? attacker.getX() + entityWidth_
+        ? attacker.getX() + attacker.getHitboxWidth()
         : attacker.getX() - attackRange_;
     return Rectangle{
-        attackX, platformY - entityHeight_ - attacker.getY(),
-        attackRange_, entityHeight_};
+        attackX,
+        platformY - attacker.getHitboxHeight() - attacker.getY(),
+        attackRange_,
+        attacker.getHitboxHeight()};
 }
 
 Rectangle CombatSystem::makePlayerDefenseHitbox(
     const Player& player, float platformY) const {
     const float defenseX = player.isFacingRight()
-        ? player.getX() + entityWidth_
+        ? player.getX() + player.getHitboxWidth()
         : player.getX() - defenseRange_;
     return Rectangle{
-        defenseX, platformY - entityHeight_ - player.getY(),
-        defenseRange_, entityHeight_};
+        defenseX,
+        platformY - player.getHitboxHeight() - player.getY(),
+        defenseRange_,
+        player.getHitboxHeight()};
 }
 
 float CombatSystem::getAttackRange() const {

@@ -19,6 +19,7 @@ public:
     void attack(Character& target); // 对目标造成当前攻击伤害
     void rangedAttack() override; // 请求一次远程攻击，受自身攻击间隔限制
     bool isFacingRight() const; // 当前朝向，供眼睛与近战攻击判定使用
+    bool isMovingHorizontally() const; // 当前输入是否会显示行走姿势
     bool consumeRangedAttackRequest(); // 供场景读取并清除本帧的子弹生成请求
     void setDefending(bool shouldDefend); // 按住防御键时尝试进入防御状态
     bool isDefending() const; // 当前是否处于可抵挡一次攻击的防御状态
@@ -40,6 +41,10 @@ public:
     int getLevel() const;
     int getExperienceThreshold() const; //升级需要的经验
 
+    // 当前测试素材由两张 96×128 的竖向帧组成，碰撞箱与单帧尺寸一致。
+    static constexpr float SPRITE_FRAME_WIDTH = 96.0F;
+    static constexpr float SPRITE_FRAME_HEIGHT = 128.0F;
+
 private:
     int jumpCount_; // 本次离地后已经使用的跳跃次数
     int maxJumpCount_; // 一次离地最多允许的跳跃次数
@@ -48,6 +53,7 @@ private:
     int level_; //主角等级
     int gold_; //主角金币
     bool isFacingRight_; // 最近一次横向移动方向，初始向右
+    bool isMovingHorizontally_; // true 时渲染第二张行走姿势，false 时渲染第一张站立姿势
     float rangedAttackCooldown_; // 下次可发射前的剩余冷却时间
     bool rangedAttackRequested_; // 本帧是否需要由场景生成子弹
     bool isDefending_; // 按住 U 且不在防御冷却时为 true

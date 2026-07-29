@@ -12,6 +12,7 @@ Player::Player(std::string name)
       level_(1),
       gold_(0),
       isFacingRight_(true), // 初始朝右，使眼睛、攻击和远程子弹都默认向右
+      isMovingHorizontally_(false),
       rangedAttackCooldown_(0.0F),
       rangedAttackRequested_(false),
       isDefending_(false),
@@ -29,6 +30,8 @@ Player::Player(std::string name)
         maxHealth_ = 10.0F;
         attackDamage_ = 5.0F;
         jumpInitialVelocity_ = 360.0F;
+        // 当前测试素材的每一帧是 96×128，显示大小和碰撞箱保持一致。
+        setHitboxSize(SPRITE_FRAME_WIDTH, SPRITE_FRAME_HEIGHT);
       }
 // 创建了主角，并且可以二连跳
 
@@ -131,6 +134,10 @@ bool Player::isFacingRight() const {
     return isFacingRight_;
 }
 
+bool Player::isMovingHorizontally() const {
+    return isMovingHorizontally_;
+}
+
 bool Player::consumeRangedAttackRequest() {
     const bool wasRequested = rangedAttackRequested_;
     rangedAttackRequested_ = false;
@@ -208,6 +215,10 @@ bool Player::applyInput(const PlayerInputState& input,
             (horizontalDirection == HorizontalInputDirection::None && isFacingRight());
         startDodge(dodgeRight);
     }
+    // 两个方向键同时按下时方向为 None，因此显示站立帧并保留原朝向。
+    // 闪避即使没有持续按方向键，也属于水平移动并显示行走姿势。
+    isMovingHorizontally_ =
+        horizontalDirection != HorizontalInputDirection::None || isDodging();
     return meleeAttackPressed;
 }
 
@@ -215,6 +226,7 @@ void Player::copyMovementStateFrom(const Player& player) {
     jumpCount_ = player.jumpCount_;
     maxJumpCount_ = player.maxJumpCount_;
     isFacingRight_ = player.isFacingRight_;
+    isMovingHorizontally_ = player.isMovingHorizontally_;
 }
 
 int Player::getExperienceThreshold() const{

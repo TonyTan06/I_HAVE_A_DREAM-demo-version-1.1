@@ -10,7 +10,7 @@ TEST(PlatformSystemTest, LandsFallingCharacterOnPlatformTop) {
     character.setPosition(120.0F, 50.0F);
     character.beginFalling();
 
-    platforms.resolveCharacterLanding(character, 70.0F, 360.0F, 32.0F);
+    platforms.resolveCharacterLanding(character, 70.0F, 360.0F);
 
     EXPECT_TRUE(character.isGrounded());
     EXPECT_FLOAT_EQ(character.getY(), 60.0F);
@@ -23,7 +23,7 @@ TEST(PlatformSystemTest, CharacterFallsAfterLeavingPlatform) {
     character.setPosition(220.0F, 60.0F);
     character.landAtHeight(60.0F);
 
-    platforms.updateCharacterSupport(character, 360.0F, 32.0F);
+    platforms.updateCharacterSupport(character, 360.0F);
 
     EXPECT_FALSE(character.isGrounded());
 }

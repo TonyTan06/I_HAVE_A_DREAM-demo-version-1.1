@@ -7,7 +7,7 @@
 
 namespace {
 CombatSystem makeCombatSystem() {
-    return CombatSystem(32.0F, 48.0F, 16.0F, 8.0F);
+    return CombatSystem(16.0F, 8.0F);
 }
 } // namespace
 
@@ -25,7 +25,8 @@ TEST(CombatSystemTest, PlayerMeleeTargetsEnemy) {
     Player player("Player");
     player.setPosition(100.0F, 0.0F);
     MeleeEnemy enemy(player);
-    enemy.setPosition(132.0F, 0.0F);
+    // 玩家当前宽 96px，所以右向 16px 近战框从 x=196 开始。
+    enemy.setPosition(196.0F, 0.0F);
     CombatSystem system = makeCombatSystem();
 
     const auto result = system.playerMeleeAttack(player, {&enemy}, 360.0F);
@@ -39,7 +40,8 @@ TEST(CombatSystemTest, EnemyMeleeCanBeBlockedByPlayerDefense) {
     player.setPosition(140.0F, 0.0F);
     player.setDefending(true);
     MeleeEnemy enemy(player);
-    enemy.setPosition(180.0F, 0.0F);
+    // 敌人在玩家右侧向左挥刀，与玩家右向 8px 防御框相交。
+    enemy.setPosition(252.0F, 0.0F);
     enemy.update(0.5F);
     CombatSystem system = makeCombatSystem();
 

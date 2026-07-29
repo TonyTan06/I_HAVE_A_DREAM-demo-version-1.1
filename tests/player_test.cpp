@@ -14,6 +14,9 @@ TEST(PlayerTest, StartsAtLevelOneWithNoGold) {
     EXPECT_FLOAT_EQ(player.getAttackDamage(), 5.0F);
     EXPECT_EQ(player.getFaction(), Faction::Friendly);
     EXPECT_TRUE(player.isFacingRight());
+    EXPECT_FALSE(player.isMovingHorizontally());
+    EXPECT_FLOAT_EQ(player.getHitboxWidth(), 96.0F);
+    EXPECT_FLOAT_EQ(player.getHitboxHeight(), 128.0F);
 }
 
 TEST(PlayerTest, CanRecoverToFullHealthAfterDeath) {
@@ -143,4 +146,20 @@ TEST(PlayerTest, AppliesDeviceIndependentMovementInput) {
 
     EXPECT_FLOAT_EQ(player.getX(), 20.0F);
     EXPECT_FALSE(player.isFacingRight());
+    EXPECT_TRUE(player.isMovingHorizontally());
+}
+
+TEST(PlayerTest, UsesIdlePoseWhenHorizontalInputsCancelEachOther) {
+    Player player("Player");
+    PlayerInputState input;
+    input.moveLeftHeld = true;
+    input.moveRightHeld = true;
+
+    player.applyInput(
+        input,
+        PlayerController::resolveHorizontalDirection(input),
+        0.5F);
+
+    EXPECT_FALSE(player.isMovingHorizontally());
+    EXPECT_TRUE(player.isFacingRight());
 }

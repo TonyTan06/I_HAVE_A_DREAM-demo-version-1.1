@@ -1,6 +1,7 @@
 #include "scene.h"
 
 #include <algorithm>
+#include <string>
 #include <vector>
 
 Scene::Scene()
@@ -10,7 +11,7 @@ Scene::Scene()
       playerSpawnX_(player_.getX()),
       playerSpawnY_(player_.getY()),
       shadowManager_(player_),
-      combatSystem_(CHARACTER_WIDTH, CHARACTER_HEIGHT, 16.0F, 8.0F),
+      combatSystem_(16.0F, 8.0F),
       platform_{0.0F, 360.0F, 1200.0F, 40.0F},
       damageTextElapsedTime_(0.0F),
       damageTextX_(0.0F),
@@ -28,26 +29,34 @@ Scene::Scene()
     // 两块小平台分别以敌军身体中心为水平中心，顶面离主地面 60px。
     const float upperPlatformY = platform_.y - UPPER_PLATFORM_HEIGHT;
     const float halfPlatformWidth = UPPER_PLATFORM_WIDTH / 2.0F;
-    const float halfCharacterWidth = CHARACTER_WIDTH / 2.0F;
     platformSystem_.addPlatform(Rectangle{
-        meleeEnemy_.getX() + halfCharacterWidth - halfPlatformWidth,
+        meleeEnemy_.getX() + meleeEnemy_.getHitboxWidth() / 2.0F - halfPlatformWidth,
         upperPlatformY,
         UPPER_PLATFORM_WIDTH,
         UPPER_PLATFORM_THICKNESS});
     platformSystem_.addPlatform(Rectangle{
-        rangedEnemy_.getX() + halfCharacterWidth - halfPlatformWidth,
+        rangedEnemy_.getX() + rangedEnemy_.getHitboxWidth() / 2.0F - halfPlatformWidth,
         upperPlatformY,
         UPPER_PLATFORM_WIDTH,
         UPPER_PLATFORM_THICKNESS});
+}
+
+bool Scene::loadAssets() {
+    // VS Code 从项目根目录启动；复制后的 build/assets 则支持直接在 build 中运行。
+    if (playerSpriteRenderer_.load("assets/移动.png")) return true;
+
+    const std::string executableRelativePath =
+        std::string(GetApplicationDirectory()) + "assets/移动.png";
+    return playerSpriteRenderer_.load(executableRelativePath.c_str());
 }
 
 Rectangle Scene::makeCharacterHitbox(
     const Character& character, const Rectangle& platform) {
     return Rectangle{
         character.getX(),
-        platform.y - Scene::CHARACTER_HEIGHT - character.getY(),
-        Scene::CHARACTER_WIDTH,
-        Scene::CHARACTER_HEIGHT};
+        platform.y - character.getHitboxHeight() - character.getY(),
+        character.getHitboxWidth(),
+        character.getHitboxHeight()};
 }
 
 void Scene::drawBackVerticalCooldownBar(
@@ -56,9 +65,9 @@ void Scene::drawBackVerticalCooldownBar(
     const float clampedProgress = std::clamp(cooldownProgress, 0.0F, 1.0F);
     const int barX = static_cast<int>(facingRight
         ? character.getX() - 6.0F
-        : character.getX() + Scene::CHARACTER_WIDTH + 2.0F);
+        : character.getX() + character.getHitboxWidth() + 2.0F);
     const int barY = static_cast<int>(characterTop);
-    const int barHeight = static_cast<int>(Scene::CHARACTER_HEIGHT);
+    const int barHeight = static_cast<int>(character.getHitboxHeight());
     const int progressHeight = static_cast<int>(barHeight * clampedProgress);
 
     DrawRectangle(barX, barY, 4, barHeight, DARKGRAY);
@@ -94,13 +103,13 @@ void Scene::update(float deltaTime) {
 
     // 所有角色共用平台支撑、实体更新、小平台落地和主地面落地顺序。
     const auto updateCharacterPhysics = [&](Character& character) {
-        platformSystem_.updateCharacterSupport(character, platform_.y, CHARACTER_WIDTH);
+        platformSystem_.updateCharacterSupport(character, platform_.y);
         const float previousHeight = character.getY();
         character.update(deltaTime);
         // 闪避等在 update 内发生的水平位移也可能让角色离开平台。
-        platformSystem_.updateCharacterSupport(character, platform_.y, CHARACTER_WIDTH);
+        platformSystem_.updateCharacterSupport(character, platform_.y);
         platformSystem_.resolveCharacterLanding(
-            character, previousHeight, platform_.y, CHARACTER_WIDTH);
+            character, previousHeight, platform_.y);
         if (character.getY() <= 0.0F) {
             character.land();
         }
@@ -109,7 +118,8 @@ void Scene::update(float deltaTime) {
     updateCharacterPhysics(meleeEnemy_);
     updateCharacterPhysics(rangedEnemy_);
 
-    const float maxPlayerX = platform_.x + platform_.width - CHARACTER_WIDTH;
+    const float maxPlayerX =
+        platform_.x + platform_.width - player_.getHitboxWidth();
     player_.setPosition(
         std::clamp(player_.getX(), platform_.x, maxPlayerX), player_.getY());
     // 伤害数字只保留一秒，与影子是否已经消失无关。
@@ -140,11 +150,11 @@ void Scene::update(float deltaTime) {
 
         const float direction = attacker.isFacingRight() ? 1.0F : -1.0F;
         const float projectileX = attacker.isFacingRight()
-            ? attacker.getX() + CHARACTER_WIDTH + PROJECTILE_RADIUS
+            ? attacker.getX() + attacker.getHitboxWidth() + PROJECTILE_RADIUS
             : attacker.getX() - PROJECTILE_RADIUS;
         projectileSystem_.spawn(ProjectileSystem::SpawnInfo{
             projectileX,
-            platform_.y - CHARACTER_HEIGHT / 2.0F - attacker.getY(),
+            platform_.y - attacker.getHitboxHeight() / 2.0F - attacker.getY(),
             direction,
             PROJECTILE_SPEED,
             PROJECTILE_MAX_DISTANCE,
@@ -173,11 +183,12 @@ void Scene::update(float deltaTime) {
         if (rangedEnemy_.tryAttack()) {
             const float direction = rangedEnemy_.isFacingRight() ? 1.0F : -1.0F;
             const float projectileX = rangedEnemy_.isFacingRight()
-                ? rangedEnemy_.getX() + CHARACTER_WIDTH + PROJECTILE_RADIUS
+                ? rangedEnemy_.getX() + rangedEnemy_.getHitboxWidth() + PROJECTILE_RADIUS
                 : rangedEnemy_.getX() - PROJECTILE_RADIUS;
             projectileSystem_.spawn(ProjectileSystem::SpawnInfo{
                 projectileX,
-                platform_.y - CHARACTER_HEIGHT / 2.0F - rangedEnemy_.getY(),
+                platform_.y - rangedEnemy_.getHitboxHeight() / 2.0F -
+                    rangedEnemy_.getY(),
                 direction,
                 PROJECTILE_SPEED,
                 PROJECTILE_MAX_DISTANCE,
@@ -269,20 +280,19 @@ void Scene::update(float deltaTime) {
         ? shadowBeforeUpdate->getY()
         : 0.0F;
     if (shadowBeforeUpdate != nullptr) {
-        platformSystem_.updateCharacterSupport(
-            *shadowBeforeUpdate, platform_.y, CHARACTER_WIDTH);
+        platformSystem_.updateCharacterSupport(*shadowBeforeUpdate, platform_.y);
     }
     shadowManager_.update(player_, deltaTime);
     if (PlayerShadow* shadowAfterUpdate = shadowManager_.getShadow();
         shadowAfterUpdate != nullptr) {
-        platformSystem_.updateCharacterSupport(
-            *shadowAfterUpdate, platform_.y, CHARACTER_WIDTH);
+        platformSystem_.updateCharacterSupport(*shadowAfterUpdate, platform_.y);
         const float heightBeforePhysics = hadShadowBeforeUpdate
             ? previousShadowHeight
             : shadowAfterUpdate->getY();
         platformSystem_.resolveCharacterLanding(
-            *shadowAfterUpdate, heightBeforePhysics, platform_.y, CHARACTER_WIDTH);
-        const float maxShadowX = platform_.x + platform_.width - CHARACTER_WIDTH;
+            *shadowAfterUpdate, heightBeforePhysics, platform_.y);
+        const float maxShadowX =
+            platform_.x + platform_.width - shadowAfterUpdate->getHitboxWidth();
         shadowAfterUpdate->setPosition(
             std::clamp(shadowAfterUpdate->getX(), platform_.x, maxShadowX),
             shadowAfterUpdate->getY());
@@ -294,11 +304,13 @@ void Scene::draw() const {
 
     DrawRectangleRec(platform_, Color{126, 91, 67, 255});
     platformSystem_.draw(Color{126, 91, 67, 255});
-    shadowManager_.draw(platform_.y, CHARACTER_WIDTH, CHARACTER_HEIGHT);
+    shadowManager_.draw(platform_.y, playerSpriteRenderer_);
 
     const auto drawEnemy = [&](const Enemy& enemy, Color eyeColor, bool facingRight) {
         // respawning 控制敌人尸体期的浅色身体和黄色复活倒计时条。
-        const float enemyTop = platform_.y - CHARACTER_HEIGHT - enemy.getY();
+        const float enemyWidth = enemy.getHitboxWidth();
+        const float enemyHeight = enemy.getHitboxHeight();
+        const float enemyTop = platform_.y - enemyHeight - enemy.getY();
         const int barX = static_cast<int>(enemy.getX());
         const int barY = static_cast<int>(enemyTop - 10.0F);
         const bool respawning = !enemy.isAlive() || enemy.isRespawning();
@@ -309,26 +321,23 @@ void Scene::draw() const {
             : enemy.getHealth() / enemy.getMaxHealth();
 
         DrawRectangle(static_cast<int>(enemy.getX()), static_cast<int>(enemyTop),
-                      static_cast<int>(CHARACTER_WIDTH), static_cast<int>(CHARACTER_HEIGHT), bodyColor);
-        DrawRectangle(barX, barY, static_cast<int>(CHARACTER_WIDTH), 5, DARKGRAY);
+                      static_cast<int>(enemyWidth), static_cast<int>(enemyHeight), bodyColor);
+        DrawRectangle(barX, barY, static_cast<int>(enemyWidth), 5, DARKGRAY);
         DrawRectangle(barX, barY,
-                      static_cast<int>(CHARACTER_WIDTH * std::clamp(barProgress, 0.0F, 1.0F)),
+                      static_cast<int>(enemyWidth * std::clamp(barProgress, 0.0F, 1.0F)),
                       5, respawning ? YELLOW : RED);
         const float eyeX = facingRight
-            ? enemy.getX() + CHARACTER_WIDTH - 8.0F
+            ? enemy.getX() + enemyWidth - 8.0F
             : enemy.getX() + 8.0F;
         DrawCircle(static_cast<int>(eyeX),
                    static_cast<int>(enemyTop + 14.0F), 3.0F, eyeColor);
     };
     drawEnemy(meleeEnemy_, BLUE, meleeEnemy_.isFacingRight());
     drawEnemy(rangedEnemy_, GREEN, rangedEnemy_.isFacingRight());
-    DrawRectangle(
-        static_cast<int>(player_.getX()),
-        static_cast<int>(platform_.y - CHARACTER_HEIGHT - player_.getY()),
-        static_cast<int>(CHARACTER_WIDTH),
-        static_cast<int>(CHARACTER_HEIGHT),
-        Color{72, 183, 255, 255});
-    const float playerTop = platform_.y - CHARACTER_HEIGHT - player_.getY();
+    playerSpriteRenderer_.draw(player_, platform_.y, WHITE);
+    const float playerWidth = player_.getHitboxWidth();
+    const float playerHeight = player_.getHitboxHeight();
+    const float playerTop = platform_.y - playerHeight - player_.getY();
     if (player_.isDodgeCoolingDown()) {
         drawBackVerticalCooldownBar(
             player_, player_.isFacingRight(),
@@ -336,33 +345,34 @@ void Scene::draw() const {
     }
     const float playerHealthRatio = player_.getHealth() / player_.getMaxHealth();
     DrawRectangle(static_cast<int>(player_.getX()), static_cast<int>(playerTop - 10.0F),
-                  static_cast<int>(CHARACTER_WIDTH), 5, DARKGRAY);
+                  static_cast<int>(playerWidth), 5, DARKGRAY);
     DrawRectangle(static_cast<int>(player_.getX()), static_cast<int>(playerTop - 10.0F),
-                  static_cast<int>(CHARACTER_WIDTH * std::clamp(playerHealthRatio, 0.0F, 1.0F)),
+                  static_cast<int>(playerWidth * std::clamp(playerHealthRatio, 0.0F, 1.0F)),
                   5, GREEN);
     const float eyeX = player_.isFacingRight()
-        ? player_.getX() + CHARACTER_WIDTH - 8.0F
+        ? player_.getX() + playerWidth - 8.0F
         : player_.getX() + 8.0F;
     DrawCircle(static_cast<int>(eyeX), static_cast<int>(playerTop + 14.0F), 3.0F, BLACK);
     if (const PlayerShadow* shadow = shadowManager_.getShadow();
         shadow != nullptr && shadow->isPositionSwapCoolingDown()) {
-        const float shadowTop = platform_.y - CHARACTER_HEIGHT - shadow->getY();
+        const float shadowTop =
+            platform_.y - shadow->getHitboxHeight() - shadow->getY();
         drawBackVerticalCooldownBar(
             *shadow, shadow->isFacingRight(), shadowTop,
             shadow->getPositionSwapCooldownProgress());
     }
     if (player_.isDefending() || attackEffectElapsedTime_ > 0.0F) {
         const float bladeBaseX = player_.isFacingRight()
-            ? player_.getX() + CHARACTER_WIDTH
+            ? player_.getX() + playerWidth
             : player_.getX();
         const Vector2 bladeTop{bladeBaseX, playerTop};
-        const Vector2 bladeBottom{bladeBaseX, playerTop + CHARACTER_HEIGHT};
+        const Vector2 bladeBottom{bladeBaseX, playerTop + playerHeight};
         const float bladeLength = player_.isDefending()
             ? combatSystem_.getDefenseRange()
             : combatSystem_.getAttackRange();
         const Vector2 bladeTip{
             player_.isFacingRight() ? bladeBaseX + bladeLength : bladeBaseX - bladeLength,
-            playerTop + CHARACTER_HEIGHT / 2.0F};
+            playerTop + playerHeight / 2.0F};
         const Color bladeColor = player_.isDefending() ? Color{255, 222, 173, 255} : WHITE;
         if (player_.isFacingRight()) {
             DrawTriangle(bladeTop, bladeBottom, bladeTip, bladeColor);
@@ -374,18 +384,19 @@ void Scene::draw() const {
     if (const PlayerShadow* shadow = shadowManager_.getShadow();
         shadow != nullptr &&
         (shadow->isDefending() || shadowAttackEffectElapsedTime_ > 0.0F)) {
-        const float shadowTop = platform_.y - CHARACTER_HEIGHT - shadow->getY();
+        const float shadowHeight = shadow->getHitboxHeight();
+        const float shadowTop = platform_.y - shadowHeight - shadow->getY();
         const float bladeBaseX = shadow->isFacingRight()
-            ? shadow->getX() + CHARACTER_WIDTH
+            ? shadow->getX() + shadow->getHitboxWidth()
             : shadow->getX();
         const Vector2 bladeTop{bladeBaseX, shadowTop};
-        const Vector2 bladeBottom{bladeBaseX, shadowTop + CHARACTER_HEIGHT};
+        const Vector2 bladeBottom{bladeBaseX, shadowTop + shadowHeight};
         const float bladeLength = shadow->isDefending()
             ? combatSystem_.getDefenseRange()
             : combatSystem_.getAttackRange();
         const Vector2 bladeTip{
             shadow->isFacingRight() ? bladeBaseX + bladeLength : bladeBaseX - bladeLength,
-            shadowTop + CHARACTER_HEIGHT / 2.0F};
+            shadowTop + shadowHeight / 2.0F};
         const Color bladeColor = shadow->isDefending()
             ? Color{255, 222, 173, 255}
             : WHITE;
@@ -396,17 +407,18 @@ void Scene::draw() const {
         }
     }
     if (meleeAttackEffectElapsedTime_ > 0.0F) {
-        const float enemyTop = platform_.y - CHARACTER_HEIGHT - meleeEnemy_.getY();
+        const float enemyHeight = meleeEnemy_.getHitboxHeight();
+        const float enemyTop = platform_.y - enemyHeight - meleeEnemy_.getY();
         const float bladeBaseX = meleeEnemy_.isFacingRight()
-            ? meleeEnemy_.getX() + CHARACTER_WIDTH
+            ? meleeEnemy_.getX() + meleeEnemy_.getHitboxWidth()
             : meleeEnemy_.getX();
         const Vector2 bladeTop{bladeBaseX, enemyTop};
-        const Vector2 bladeBottom{bladeBaseX, enemyTop + CHARACTER_HEIGHT};
+        const Vector2 bladeBottom{bladeBaseX, enemyTop + enemyHeight};
         const Vector2 bladeTip{
             meleeEnemy_.isFacingRight()
                 ? bladeBaseX + combatSystem_.getAttackRange()
                 : bladeBaseX - combatSystem_.getAttackRange(),
-            enemyTop + CHARACTER_HEIGHT / 2.0F};
+            enemyTop + enemyHeight / 2.0F};
         if (meleeEnemy_.isFacingRight()) {
             DrawTriangle(bladeTop, bladeBottom, bladeTip, Color{255, 182, 193, 255});
         } else {

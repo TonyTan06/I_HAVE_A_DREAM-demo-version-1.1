@@ -20,8 +20,7 @@ public:
         Rectangle targetHitbox; // 命中目标的屏幕碰撞箱，供伤害数字定位
     };
 
-    CombatSystem(float entityWidth, float entityHeight, float attackRange,
-                 float defenseRange);
+    CombatSystem(float attackRange, float defenseRange);
 
     Character* findNearestEnemyTarget(const Enemy& enemy, Player& player) const;
     AttackResult playerMeleeAttack(Player& player,
@@ -38,8 +37,6 @@ public:
     float getDefenseRange() const; // Scene 绘制防御刀刃时使用的防御长度
 
 private:
-    float entityWidth_; // 场景中角色统一碰撞箱宽度
-    float entityHeight_; // 场景中角色统一碰撞箱高度
     float attackRange_; // 近战攻击框向当前朝向延伸的距离
     float defenseRange_; // 玩家防御框向当前朝向延伸的距离
 };

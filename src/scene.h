@@ -5,6 +5,7 @@
 #include "player.h"
 #include "player_controller.h"
 #include "player_shadow.h"
+#include "player_sprite_renderer.h"
 #include "platform_system.h"
 #include "projectile_system.h"
 #include "ranged_enemy.h"
@@ -15,11 +16,13 @@ class Scene {
 public:
     Scene(); // 创建玩家、敌军、主平台、头顶平台以及各功能系统
 
+    bool loadAssets(); // raylib 窗口创建后加载玩家双帧素材
     void update(float deltaTime); // 每帧调用各实体和系统，不在 Scene 内保存技能算法
     void draw() const; // 绘制场景实体、HUD、状态条和攻击特效
 
 private:
     Player player_; // 受键盘控制的主角实体
+    PlayerSpriteRenderer playerSpriteRenderer_; // 加载并绘制玩家与影子的站立/行走双帧素材
     PlayerController playerController_; // 将键盘及后续输入设备转换为统一玩家操作
     MeleeEnemy meleeEnemy_; // 平台右侧生成的近战敌军
     RangedEnemy rangedEnemy_; // 平台右侧生成的远程敌军
@@ -40,8 +43,6 @@ private:
     bool rangedEnemyExperienceAwarded_; // 本次远程兵死亡是否已经奖励过经验
     ProjectileSystem projectileSystem_; // 统一管理生成、移动、碰撞、伤害与绘制的弹道系统
 
-    static constexpr float CHARACTER_WIDTH = 32.0F; // 玩家、影子和敌军共用的碰撞箱宽度
-    static constexpr float CHARACTER_HEIGHT = 48.0F; // 玩家、影子和敌军共用的碰撞箱高度
     static constexpr float DAMAGE_TEXT_LIFETIME = 1.0F; // 伤害数字显示时长
     static constexpr float ATTACK_EFFECT_LIFETIME = 0.15F; // 一次刀刃特效显示时长
     static constexpr float PROJECTILE_RADIUS = 4.0F; // 当前普通远程攻击的圆形子弹半径

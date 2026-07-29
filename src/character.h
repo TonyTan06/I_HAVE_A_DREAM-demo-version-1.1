@@ -30,6 +30,8 @@ public:
     float getHealth() const; // 当前生命值，用于状态条和受击判定
     float getX() const; //获取角色 x 轴位置
     float getY() const; //获取角色相对地面的高度
+    float getHitboxWidth() const; // 当前角色受击箱和平台碰撞箱的宽度，单位：像素
+    float getHitboxHeight() const; // 当前角色受击箱和平台碰撞箱的高度，单位：像素
     void setPosition(float x, float y); //设置角色位置
     void land(); //将角色放回地面并重置竖直速度
     void landAtHeight(float height); //让角色站在指定离地高度并重置竖直速度
@@ -63,6 +65,8 @@ protected:
     float attackDamage_; //角色攻击伤害
     float attacksPerSecond_; //角色每秒攻击速度
     float shield_; //角色护盾值
+    float hitboxWidth_; // 角色自身的碰撞箱宽度；允许玩家和敌人使用不同尺寸
+    float hitboxHeight_; // 角色自身的碰撞箱高度；玩家当前尺寸来自素材单帧大小
 
     //不同角色可以设置不同的重力倍率，影响跳跃高度和下落速度
     float jumpInitialVelocity_; //角色跳跃初速度
@@ -72,9 +76,6 @@ protected:
     bool isGrounded_; //检测角色是否下落到实体上
     Faction faction_;
 
-    
-
-private:
-
-
+    // 派生角色在构造时按自身素材设置碰撞箱；无效尺寸不会覆盖原值。
+    void setHitboxSize(float width, float height);
 };
