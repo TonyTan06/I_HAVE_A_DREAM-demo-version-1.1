@@ -62,7 +62,9 @@ set(GAME_DOMAIN_SOURCES
     src/rendering/player_sprite_renderer.cpp
     src/systems/combat_system.cpp
     src/systems/platform_system.cpp
+    src/systems/player_action_system.cpp
     src/systems/projectile_system.cpp
+    src/systems/save_game_store.cpp
     src/systems/shadow_manager.cpp
 )
 
@@ -80,6 +82,8 @@ target_include_directories(game_domain PUBLIC
 
 add_library(game_app
     src/engine/game_engine.cpp
+    src/engine/game_state.cpp
+    src/engine/pause_menu.cpp
     src/scenes/game_scene.cpp
 )
 
