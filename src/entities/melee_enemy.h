@@ -1,12 +1,9 @@
 #pragma once
 
 #include "entities/enemy.h"
+#include <string>
 
 class MeleeEnemy : public Enemy {
-public:
-    explicit MeleeEnemy() 
-    : Enemy(enemy) 
-    {
-        
-    }
+protected:
+    explicit MeleeEnemy(std::string name);
 };

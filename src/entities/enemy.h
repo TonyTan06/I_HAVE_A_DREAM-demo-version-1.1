@@ -18,7 +18,6 @@ class Enemy : public Character {
 
 public:
     // name 是敌军实体名称。
-    explicit Enemy(std::string name);
     void update(float deltaTime, float worldGravity) override; //敌人状态更新
     
     float getDetectionRange() const; // 返回当前兵种用于选择目标的水平检测距离
@@ -26,6 +25,7 @@ public:
     std::vector<LootItem> dropLoot(); //掉落物品表
 
 protected:
+    explicit Enemy(std::string name);
 
     float detectionRange_;     // 兵种自身索敌距离，供后续 AI 或技能配置使用
 

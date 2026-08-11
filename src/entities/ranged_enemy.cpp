@@ -2,7 +2,8 @@
 
 #include "entities/player.h"
 
-RangedEnemy::RangedEnemy()
-    : Enemy("RANGED_ENEMY") {
+RangedEnemy::RangedEnemy(std::string name)
+    : Enemy(std::move(name))
+    {
     
 }
