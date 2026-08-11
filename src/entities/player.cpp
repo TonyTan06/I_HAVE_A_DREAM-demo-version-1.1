@@ -1,5 +1,4 @@
 #include "entities/player.h"
-#include "input/player_controller.h"
 
 #include <algorithm>
 #include <utility>
@@ -8,61 +7,48 @@
 
 Player::Player(std::string name)
     : Character(std::move(name)),
-      jumpCount_(0),
-      maxJumpCount_(2),
-      experience_(0),
-      level_(1),
-      gold_(0),
-      isFacingRight_(true), // 初始朝右，使眼睛、攻击和远程子弹都默认向右
-      isMovingHorizontally_(false),
-      rangedAttackCooldown_(0.0F),
+
       rangedAttackRequested_(false),
       isDefending_(false),
-      defenseCooldown_(0.0F),
       isDodging_(false),
       dodgeRight_(true),
+      isTakingTrueDamage_(false),
+
+      defenseCooldown_(0.0F),
       dodgeElapsedTime_(0.0F),
       dodgeCooldown_(0.0F),
-      lastDodgeDistance_(0.0F) {
-        setGravityScale(1.0F);
-        setFaction(Faction::Friendly);
+      lastDodgeDistance_(0.0F),
+      defenseRange_(16.0F)
+      {
         x_ = 140.0F;
         moveSpeed_ = 240.0F;
-        health_ = 10.0F;
-        maxHealth_ = 10.0F;
-        attackDamage_ = 5.0F;
+        meleeAttackInterval_ = 1.0F;
+        rangedAttackInterval_ = 1.0F;
+        meleeAttackCooldownRemaining_ = 0.0F;
+        rangedAttackCooldownRemaining_ = 0.0F;
+        hitboxWidth_ = SPRITE_FRAME_WIDTH;
+        hitboxHeight_ = SPRITE_FRAME_HEIGHT;
         jumpInitialVelocity_ = 360.0F;
+        meleeAttackRange_ = 48.0F;
+        rangedAttackRange_ = 240.0F;
+
+        health_ = 1;
+        maxJumpCount_ = 2;
+
+        setFaction(Faction::Friendly);
+        setGravityScale(1.0F);
         // 当前测试素材的每一帧是 96×128，显示大小和碰撞箱保持一致。
         setHitboxSize(SPRITE_FRAME_WIDTH, SPRITE_FRAME_HEIGHT);
       }
 // 创建了主角，并且可以二连跳
 
-void Player::moveRight(float deltaTime) {
-    isFacingRight_ = true;
-    Character::moveRight(deltaTime);
-} //主角右移
-
-void Player::moveLeft(float deltaTime) {
-    isFacingRight_ = false;
-    Character::moveLeft(deltaTime);
-} //主角左移
-
-void Player::jump() {
-    if (jumpCount_ >= maxJumpCount_) return;
-
-    verticalVelocity_ = jumpInitialVelocity_;
-    isGrounded_ = false;
-    ++jumpCount_;
-} //角色跳跃
-
-void Player::update(float deltaTime) {
+void Player::update(float deltaTime, float worldGravity) {
     // 每帧重新记录，供 ShadowManager 区分普通移动与闪避移动。
     lastDodgeDistance_ = 0.0F;
     // 先更新角色共有的重力、跳跃等物理状态。
-    Character::update(deltaTime);
+    Character::update(deltaTime, worldGravity);
 
-    // 两个普通冷却按每帧经过的时间递减，且不会低于零。
-    rangedAttackCooldown_ = std::max(0.0F, rangedAttackCooldown_ - deltaTime);
+    // 玩家自身的防御与闪避冷却按帧递减；攻击冷却由 Character 统一更新。
     defenseCooldown_ = std::max(0.0F, defenseCooldown_ - deltaTime);
     if (defenseCooldown_ > 0.0F) {
         isDefending_ = false;
@@ -85,65 +71,19 @@ void Player::update(float deltaTime) {
     if (isGrounded_) jumpCount_ = 0;
 } //主角的状态更新，主角独有的加在这里面
 
-void Player::addGold(int value) {
-    if (value <= 0) return;
-
-    gold_ += value;
-}
-
-void Player::addExperience(int value) {
-    if (value <= 0) return;
-
-    experience_ += value;
-
-    while (experience_ >= getExperienceThreshold()) {
-        levelUp();
+void Player::applyMeleeHit(Character& target) const {
+    if (isTakingTrueDamage_) {
+        target.takeTrueDamage();
+    } else {
+        target.takeDamage();
     }
 }
 
-void Player::levelUp() {
-    experience_ -= getExperienceThreshold();
-    ++level_;
-    maxHealth_ += 5.0F;
-    health_ = maxHealth_;
-    attackDamage_ += 1.0F;
-    attacksPerSecond_ += 0.1F;
-    /*
-    physicalDefense_ += ;
-    magicalDefense_ += ;
-    */
+bool Player::rangedAttack() {
+    if (!tryBeginRangedAttack()) return false;
 
-    std::cout << "LEVEL UP!" << std::endl;
-}
-
-void Player::attack() {
-    std::cout << "Attack!!!" << std::endl;
-}
-
-void Player::attack(Character& target) {
-    target.takeDamage(attackDamage_);
-}
-
-void Player::rangedAttack() {
-    if (isDefending_) return;
-    if (rangedAttackCooldown_ > 0.0F) return;
-
-    rangedAttackCooldown_ = RANGED_ATTACK_INTERVAL;
     rangedAttackRequested_ = true;
-}
-
-bool Player::isFacingRight() const {
-    return isFacingRight_;
-}
-
-bool Player::isMovingHorizontally() const {
-    return isMovingHorizontally_;
-}
-
-bool Player::consumeRangedAttackRequest() {
-    const bool wasRequested = rangedAttackRequested_;
-    rangedAttackRequested_ = false;
-    return wasRequested;
+    return true;
 }
 
 void Player::setDefending(bool shouldDefend) {
@@ -155,6 +95,20 @@ void Player::setDefending(bool shouldDefend) {
 
 bool Player::isDefending() const {
     return isDefending_;
+}
+
+bool Player::isDodging() const {
+    return isDodging_;
+}
+
+bool Player::isDodgeCoolingDown() const {
+    return dodgeCooldown_ > 0.0F;
+}
+
+bool Player::consumeRangedAttackRequest() {
+    const bool wasRequested = rangedAttackRequested_;
+    rangedAttackRequested_ = false;
+    return wasRequested;
 }
 
 bool Player::blockNextAttack() {
@@ -170,18 +124,23 @@ bool Player::startDodge(bool dodgeRight) {
     if (isDodging_ || dodgeCooldown_ > 0.0F) return false;
 
     isDodging_ = true;
+    isMovingHorizontally_ = true;
     dodgeRight_ = dodgeRight;
     dodgeElapsedTime_ = 0.0F;
     dodgeCooldown_ = DODGE_COOLDOWN;
     return true;
 }
 
-bool Player::isDodging() const {
-    return isDodging_;
+bool Player::tryBeginMeleeAttack() {
+    if (isDefending_) return false;
+
+    return Character::tryBeginMeleeAttack();
 }
 
-bool Player::isDodgeCoolingDown() const {
-    return dodgeCooldown_ > 0.0F;
+bool Player::tryBeginRangedAttack() {
+    if (isDefending_) return false;
+
+    return Character::tryBeginRangedAttack();
 }
 
 float Player::getDodgeCooldownProgress() const {
@@ -193,35 +152,8 @@ float Player::getLastDodgeDistance() const {
     return lastDodgeDistance_;
 }
 
-bool Player::applyInput(const PlayerInputState& input,
-                        HorizontalInputDirection horizontalDirection,
-                        float deltaTime) {
-    if (!isDodging()) {
-        if (horizontalDirection == HorizontalInputDirection::Left) {
-            moveLeft(deltaTime);
-        } else if (horizontalDirection == HorizontalInputDirection::Right) {
-            moveRight(deltaTime);
-        }
-    }
-    if (input.jumpPressed) {
-        jump();
-    }
-
-    setDefending(input.defendHeld);
-    const bool meleeAttackPressed = input.meleeAttackPressed && !isDefending();
-    if (input.rangedAttackPressed && !isDefending()) {
-        rangedAttack();
-    }
-    if (input.dodgePressed) {
-        const bool dodgeRight = horizontalDirection == HorizontalInputDirection::Right ||
-            (horizontalDirection == HorizontalInputDirection::None && isFacingRight());
-        startDodge(dodgeRight);
-    }
-    // 两个方向键同时按下时方向为 None，因此显示站立帧并保留原朝向。
-    // 闪避即使没有持续按方向键，也属于水平移动并显示行走姿势。
-    isMovingHorizontally_ =
-        horizontalDirection != HorizontalInputDirection::None || isDodging();
-    return meleeAttackPressed;
+float Player::getDefenseRange() const {
+    return defenseRange_;
 }
 
 void Player::copyMovementStateFrom(const Player& player) {
@@ -231,26 +163,12 @@ void Player::copyMovementStateFrom(const Player& player) {
     isMovingHorizontally_ = player.isMovingHorizontally_;
 }
 
-int Player::getExperienceThreshold() const{
-    return static_cast<int>(10.0F * (level_ + level_ * std::log(level_)));
+void Player::copyAttributesFrom(const Player& player) {
+    moveSpeed_ = player.getMoveSpeed();
+    meleeAttackInterval_ = player.getMeleeAttackInterval();
+    rangedAttackInterval_ = player.getRangedAttackInterval();
+    hitboxWidth_ = player.getHitboxWidth();
+    hitboxHeight_ = player.getHitboxHeight();
+    jumpInitialVelocity_ = player.getJumpInitialVelocity();
+    gravityScale_ = player.getGravityScale();
 }
-
-int Player::getJumpCount() const {
-    return jumpCount_;
-} //获取当前跳跃次数
-
-int Player::getMaxJumpCount() const {
-    return maxJumpCount_;
-} //获取最大跳跃次数
-
-int Player::getGold() const {
-    return gold_;
-} //获取当前金币数量
-
-int Player::getExperience() const {
-    return experience_;
-} //显示当前经验值
-
-int Player::getLevel() const {
-    return level_;
-} //显示当前等级
