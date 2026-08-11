@@ -1,4 +1,4 @@
-#include "item.h"
+#include "entities/item.h"
 
 #include <gtest/gtest.h>
 

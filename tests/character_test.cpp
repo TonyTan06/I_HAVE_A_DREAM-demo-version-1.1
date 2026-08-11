@@ -1,4 +1,4 @@
-#include "character.h"
+#include "entities/character.h"
 
 #include <gtest/gtest.h>
 

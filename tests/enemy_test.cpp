@@ -1,4 +1,4 @@
-#include "enemy.h"
+#include "entities/enemy.h"
 
 #include <gtest/gtest.h>
 

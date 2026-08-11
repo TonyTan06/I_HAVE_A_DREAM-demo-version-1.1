@@ -1,5 +1,6 @@
-#include "player.h"
-#include "player_shadow.h"
+#include "entities/player.h"
+#include "entities/player_shadow.h"
+#include "input/player_controller.h"
 
 #include <gtest/gtest.h>
 

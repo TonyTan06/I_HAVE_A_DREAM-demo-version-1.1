@@ -1,4 +1,5 @@
-#include "player.h"
+#include "entities/player.h"
+#include "input/player_controller.h"
 
 #include <gtest/gtest.h>
 

@@ -1,6 +1,6 @@
-#include "shadow_manager.h"
+#include "systems/shadow_manager.h"
 
-#include "player.h"
+#include "entities/player.h"
 
 #include <gtest/gtest.h>
 

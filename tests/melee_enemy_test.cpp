@@ -1,5 +1,5 @@
-#include "melee_enemy.h"
-#include "player.h"
+#include "entities/melee_enemy.h"
+#include "entities/player.h"
 
 #include <gtest/gtest.h>
 
