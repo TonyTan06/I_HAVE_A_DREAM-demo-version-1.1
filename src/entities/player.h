@@ -8,12 +8,13 @@ public:
     explicit Player(std::string name); //创建了主角
     void update(float deltaTime, float worldGravity) override; //主角状态更新    
     void applyMeleeHit(Character& target) const; // 结算一次已经成功起手的近战命中
+    void revive(); // 死亡后恢复当前基础生命，不引入额外的最大生命属性
     void setDefending(bool shouldDefend); // 根据动作请求尝试进入或退出防御状态
 
     bool isDefending() const; // 当前是否处于可抵挡一次攻击的防御状态
     bool isDodging() const; // 当前是否正处于 0.2 秒闪避过程
     bool isDodgeCoolingDown() const; // 闪避是否仍在 5 秒冷却内
-    bool consumeRangedAttackRequest(); // 供场景读取并清除本帧的子弹生成请求
+    bool consumeRangedAttackRequest(); // 供 GameWorld 读取并清除本帧的弹道生成请求
     bool blockNextAttack(); // 防御判定命中后抵挡一次攻击并开始冷却
     bool startDodge(bool dodgeRight); // 开始一次沿指定方向的闪避
     bool tryBeginMeleeAttack() override; // 防御中或公共近战冷却未完成时拒绝起手
@@ -35,11 +36,11 @@ protected:
 
 private:
 
-    bool rangedAttackRequested_; // 本帧是否需要由场景生成子弹
+    bool rangedAttackRequested_; // 本帧是否需要由 GameWorld 生成弹道
     bool isDefending_; // 持续请求防御且不在防御冷却时为 true
     bool isDodging_; // 闪避动作开始后、持续时间未结束时为 true
     bool dodgeRight_; // 本次闪避锁定的方向：true 向右，false 向左
-    bool isTakingTrueDamage_; // 受到真实伤害时为 true，供场景播放受击特效使用
+    bool isTakingTrueDamage_; // 近战命中时是否对目标造成真实伤害
 
     float defenseCooldown_; // 成功防御后剩余的不可防御时间，单位：秒
     float dodgeElapsedTime_; // 当前闪避已进行的时间，单位：秒

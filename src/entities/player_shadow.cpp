@@ -28,6 +28,6 @@ void PlayerShadow::takeTrueDamage() {
 }
 
 void PlayerShadow::update(float deltaTime, float worldGravity) {
-    // 先更新继承自 Player 的重力、动作和普通冷却，再更新影子技能冷却。
+    // 复用 Player 的重力、动作和普通冷却更新。
     Player::update(deltaTime, worldGravity);
 }

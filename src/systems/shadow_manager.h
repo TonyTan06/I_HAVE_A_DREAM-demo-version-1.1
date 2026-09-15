@@ -9,13 +9,16 @@ class Player;
 class PlayerSpriteRenderer;
 
 // ShadowManager 只负责影子的记录点、生成距离、实体生命周期和销毁。
-// 影子的技能选择与执行全部属于 PlayerShadow，不在管理器中处理。
 class ShadowManager {
 public:
     explicit ShadowManager(const Player& player); // 以玩家出生位置建立第一个记录点
 
-    void update(const Player& player, float deltaTime); // 更新距离、生成、重力和持续时间
+    void update(
+        const Player& player,
+        float deltaTime,
+        float worldGravity); // 更新距离、生成、重力和持续时间
     void resetPlayerTracking(const Player& player); // 玩家瞬移后重置距离跟踪
+    void reset(const Player& player); // prototype 复活时删除影子并重新记录玩家状态
     // 使用玩家同一套双帧素材绘制记录点和已生成影子。
     void draw(float platformY, const PlayerSpriteRenderer& spriteRenderer) const;
 

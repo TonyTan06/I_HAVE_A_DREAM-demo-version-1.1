@@ -12,6 +12,7 @@ build/
 build-tests/
 build-asan/
 build-debug/
+build-arm64/
 
 *.dSYM/
 

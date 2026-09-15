@@ -79,6 +79,20 @@ void Player::applyMeleeHit(Character& target) const {
     }
 }
 
+void Player::revive() {
+    health_ = 1;
+    isDefending_ = false;
+    isDodging_ = false;
+    rangedAttackRequested_ = false;
+    defenseCooldown_ = 0.0F;
+    dodgeElapsedTime_ = 0.0F;
+    dodgeCooldown_ = 0.0F;
+    lastDodgeDistance_ = 0.0F;
+    meleeAttackCooldownRemaining_ = 0.0F;
+    rangedAttackCooldownRemaining_ = 0.0F;
+    stopMovingHorizontally();
+}
+
 bool Player::rangedAttack() {
     if (!tryBeginRangedAttack()) return false;
 
@@ -171,4 +185,7 @@ void Player::copyAttributesFrom(const Player& player) {
     hitboxHeight_ = player.getHitboxHeight();
     jumpInitialVelocity_ = player.getJumpInitialVelocity();
     gravityScale_ = player.getGravityScale();
+    meleeAttackRange_ = player.getMeleeAttackRange();
+    rangedAttackRange_ = player.getRangedAttackRange();
+    defenseRange_ = player.getDefenseRange();
 }

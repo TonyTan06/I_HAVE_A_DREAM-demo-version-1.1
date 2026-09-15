@@ -7,7 +7,7 @@
 class Character;
 
 // PlatformSystem 统一保存单向平台，并处理角色站立、离开和下落碰撞。
-// 具体平台布局由场景创建，系统只实现通用规则。
+// 具体平台布局由 GameWorld 持有，系统只实现通用规则。
 class PlatformSystem {
 public:
     void addPlatform(const Rectangle& platform); // 添加一块使用屏幕坐标表示的平台
@@ -25,6 +25,9 @@ public:
 private:
     std::vector<Rectangle> platforms_; // 当前场景中的全部单向平台
 
+    bool isCharacterSupported(
+        const Character& character,
+        float groundY) const; // 检查角色是否仍站在任一高处平台上
     static bool overlapsHorizontally(
         const Character& character,
         const Rectangle& platform); // 使用角色自身碰撞箱宽度判断是否与平台重叠

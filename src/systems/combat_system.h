@@ -1,14 +1,13 @@
 #pragma once
 
 #include "entities/enemy.h"
-#include "entities/melee_enemy.h"
 #include "entities/player.h"
 #include "raylib.h"
 
 #include <vector>
 
-// CombatSystem 统一负责近战目标选择、攻击框、命中、防御与伤害结算。
-// 绘制特效和输入仍属于 Scene，角色数值仍由各 Character 派生类保存。
+// CombatSystem 统一负责敌军索敌、攻击机会及近战命中、防御与伤害结算。
+// 攻击范围由角色属性提供；GameWorld 协调弹道生成，GameScene 负责视觉反馈。
 class CombatSystem {
 public:
     struct AttackResult {
@@ -16,27 +15,37 @@ public:
         bool hit; // 攻击是否命中了可受伤目标
         bool blocked; // 本次命中是否被玩家正前方防御抵挡
         Character* target; // 被命中或成功防御的目标；没有目标时为空
-        float damage; // 实际造成的伤害；未命中或被抵挡时为 0
+        float damage; // 当前无数值伤害 API；命中时用于 HUD 的单次受击数值
         Rectangle targetHitbox; // 命中目标的屏幕碰撞箱，供伤害数字定位
     };
 
-    CombatSystem(float attackRange, float defenseRange);
+    struct RangedAttackResult {
+        bool projectileRequested; // 是否成功消耗攻击冷却并应生成一枚弹道
+        const Character* target; // 本帧只读索敌结果；范围内没有有效目标时为空
+    };
+
+    CombatSystem() = default;
 
     Character* findNearestEnemyTarget(const Enemy& enemy, Player& player) const;
     AttackResult playerMeleeAttack(Player& player,
                                    const std::vector<Enemy*>& enemies,
                                    float platformY) const;
-    AttackResult enemyMeleeAttack(MeleeEnemy& enemy, Player& player,
+    AttackResult enemyMeleeAttack(Enemy& enemy, Player& player,
                                   float platformY) const;
+    // 完成敌人的远程范围与攻击冷却判定；弹道参数仍由上层配置。
+    RangedAttackResult tryEnemyRangedAttack(
+        Enemy& enemy, Player& player) const;
 
     Rectangle makeCharacterHitbox(const Character& character, float platformY) const;
     Rectangle makeMeleeAttackHitbox(const Character& attacker, bool facingRight,
                                     float platformY) const;
     Rectangle makePlayerDefenseHitbox(const Player& player, float platformY) const;
-    float getAttackRange() const; // Scene 绘制刀刃时使用的近战长度
-    float getDefenseRange() const; // Scene 绘制防御刀刃时使用的防御长度
 
 private:
-    float attackRange_; // 近战攻击框向当前朝向延伸的距离
-    float defenseRange_; // 玩家防御框向当前朝向延伸的距离
+    static void considerTarget(
+        const Enemy& enemy,
+        Character& candidate,
+        bool invulnerable,
+        Character*& nearestTarget,
+        float& nearestDistance);
 };

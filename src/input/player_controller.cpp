@@ -2,9 +2,21 @@
 
 #include "raylib.h"
 
+namespace {
+
+constexpr int GAMEPAD_INDEX = 0;
+constexpr float GAMEPAD_DEADZONE = 0.2F;
+
+} // namespace
+
+PlayerController::PlayerController(const InputBindings& bindings)
+    : bindings_(bindings) {
+}
+
 PlayerInputState PlayerController::pollInput() const {
-    // 后续接入手柄时，在此读取手柄状态并通过 mergeInputStates 合并。
-    return pollKeyboard();
+    const PlayerInputState keyboardInput = pollKeyboard();
+    const PlayerInputState gamepadInput = pollGamepad();
+    return mergeInputStates(keyboardInput, gamepadInput);
 }
 
 PlayerInputState PlayerController::mergeInputStates(
@@ -14,41 +26,59 @@ PlayerInputState PlayerController::mergeInputStates(
     merged.moveLeftHeld = first.moveLeftHeld || second.moveLeftHeld;
     merged.moveRightHeld = first.moveRightHeld || second.moveRightHeld;
     merged.jumpPressed = first.jumpPressed || second.jumpPressed;
-    merged.meleeAttackPressed =
-        first.meleeAttackPressed || second.meleeAttackPressed;
-    merged.rangedAttackPressed =
-        first.rangedAttackPressed || second.rangedAttackPressed;
+    merged.meleeAttackPressed = first.meleeAttackPressed || second.meleeAttackPressed;
+    merged.rangedAttackPressed = first.rangedAttackPressed || second.rangedAttackPressed;
     merged.defendHeld = first.defendHeld || second.defendHeld;
     merged.dodgePressed = first.dodgePressed || second.dodgePressed;
-    merged.selectShadowSkill1Pressed =
-        first.selectShadowSkill1Pressed || second.selectShadowSkill1Pressed;
-    merged.useShadowSkill2Pressed =
-        first.useShadowSkill2Pressed || second.useShadowSkill2Pressed;
 
     return merged;
-}
-
-HorizontalInputDirection PlayerController::resolveHorizontalDirection(
-    const PlayerInputState& input) {
-    if (input.moveLeftHeld == input.moveRightHeld) {
-        // 两者均未按下或同时按下时都不产生移动，也不会改变玩家朝向。
-        return HorizontalInputDirection::None;
-    }
-    return input.moveLeftHeld ? HorizontalInputDirection::Left : HorizontalInputDirection::Right;
 }
 
 PlayerInputState PlayerController::pollKeyboard() const {
     PlayerInputState input;
 
-    input.moveLeftHeld = IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT);
-    input.moveRightHeld = IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT);
-    input.jumpPressed = IsKeyPressed(KEY_SPACE);
-    input.meleeAttackPressed = IsKeyPressed(KEY_J);
-    input.rangedAttackPressed = IsKeyPressed(KEY_K);
-    input.defendHeld = IsKeyDown(KEY_U);
-    input.dodgePressed = IsKeyPressed(KEY_L);
-    input.selectShadowSkill1Pressed = IsKeyPressed(KEY_ONE);
-    input.useShadowSkill2Pressed = IsKeyPressed(KEY_TWO);
+    input.moveLeftHeld = isBindingDown(bindings_.keyboard.moveLeft);
+    input.moveRightHeld = isBindingDown(bindings_.keyboard.moveRight);
+    input.jumpPressed = isBindingPressed(bindings_.keyboard.jump);
+    input.meleeAttackPressed = isBindingPressed(bindings_.keyboard.meleeAttack);
+    input.rangedAttackPressed = isBindingPressed(bindings_.keyboard.rangedAttack);
+    input.defendHeld = isBindingDown(bindings_.keyboard.defend);
+    input.dodgePressed = isBindingPressed(bindings_.keyboard.dodge);
 
     return input;
+}
+
+PlayerInputState PlayerController::pollGamepad() const {
+    if (!IsGamepadAvailable(GAMEPAD_INDEX)) return PlayerInputState{};
+
+    PlayerInputState input;
+    const float axisX = GetGamepadAxisMovement(
+        GAMEPAD_INDEX, GAMEPAD_AXIS_LEFT_X);
+
+    input.moveLeftHeld = axisX < -GAMEPAD_DEADZONE ||
+        IsGamepadButtonDown(GAMEPAD_INDEX, GAMEPAD_BUTTON_LEFT_FACE_LEFT);
+    input.moveRightHeld = axisX > GAMEPAD_DEADZONE ||
+        IsGamepadButtonDown(GAMEPAD_INDEX, GAMEPAD_BUTTON_LEFT_FACE_RIGHT);
+    input.jumpPressed = IsGamepadButtonPressed(
+        GAMEPAD_INDEX, bindings_.gamepad.jumpButton);
+    input.meleeAttackPressed = IsGamepadButtonPressed(
+        GAMEPAD_INDEX, bindings_.gamepad.meleeAttackButton);
+    input.rangedAttackPressed = IsGamepadButtonPressed(
+        GAMEPAD_INDEX, bindings_.gamepad.rangedAttackButton);
+    input.defendHeld = IsGamepadButtonDown(
+        GAMEPAD_INDEX, bindings_.gamepad.defendButton);
+    input.dodgePressed = IsGamepadButtonPressed(
+        GAMEPAD_INDEX, bindings_.gamepad.dodgeButton);
+
+    return input;
+}
+
+bool PlayerController::isBindingDown(const KeyBinding& binding) {
+    return (binding.primary != KEY_NULL && IsKeyDown(binding.primary)) ||
+        (binding.secondary != KEY_NULL && IsKeyDown(binding.secondary));
+}
+
+bool PlayerController::isBindingPressed(const KeyBinding& binding) {
+    return (binding.primary != KEY_NULL && IsKeyPressed(binding.primary)) ||
+        (binding.secondary != KEY_NULL && IsKeyPressed(binding.secondary));
 }

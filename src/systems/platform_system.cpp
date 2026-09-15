@@ -21,13 +21,7 @@ void PlatformSystem::updateCharacterSupport(
     Character& character, float groundY) const {
     if (!character.isGrounded() || character.getY() <= 0.0F) return;
 
-    const bool stillSupported = std::any_of(
-        platforms_.begin(), platforms_.end(), [&](const Rectangle& platform) {
-            const float platformHeight = groundY - platform.y;
-            return std::abs(character.getY() - platformHeight) <= 0.01F &&
-                overlapsHorizontally(character, platform);
-        });
-    if (!stillSupported) {
+    if (!isCharacterSupported(character, groundY)) {
         character.beginFalling();
     }
 }
@@ -56,6 +50,18 @@ void PlatformSystem::resolveCharacterLanding(
 
 const std::vector<Rectangle>& PlatformSystem::getPlatforms() const {
     return platforms_;
+}
+
+bool PlatformSystem::isCharacterSupported(
+    const Character& character, float groundY) const {
+    for (const Rectangle& platform : platforms_) {
+        const float platformHeight = groundY - platform.y;
+        if (std::abs(character.getY() - platformHeight) <= 0.01F &&
+            overlapsHorizontally(character, platform)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool PlatformSystem::overlapsHorizontally(

@@ -12,7 +12,7 @@ public:
     // 影子没有血量概念，任何直接伤害调用都会被忽略。
     void takeDamage() override;
     void takeTrueDamage() override;
-    void update(float deltaTime, float worldGravity) override; // 更新影子自身动作状态与技能 2 冷却
+    void update(float deltaTime, float worldGravity) override; // 更新影子的物理与普通动作冷却
 
 private:
 

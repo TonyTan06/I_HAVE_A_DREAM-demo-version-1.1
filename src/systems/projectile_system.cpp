@@ -18,9 +18,13 @@ void ProjectileSystem::spawn(const SpawnInfo& spawnInfo) {
     projectiles_.push_back(projectile);
 }
 
+void ProjectileSystem::clear() {
+    projectiles_.clear();
+}
+
 std::vector<ProjectileSystem::Impact> ProjectileSystem::update(
     float deltaTime, const std::vector<Target>& targets) {
-    std::vector<Impact> impacts; // 返回给 Scene 的本帧命中结果
+    std::vector<Impact> impacts; // 返回给 GameWorld 的本帧命中结果
     const float safeDeltaTime = std::max(0.0F, deltaTime); // 负时间不允许弹道倒退
 
     for (auto projectileIterator = projectiles_.begin();
@@ -51,11 +55,11 @@ std::vector<ProjectileSystem::Impact> ProjectileSystem::update(
                 continue;
             }
 
-            character->takeDamage(projectile.properties.damage);
+            character->takeDamage();
             projectile.hitTargets.push_back(character);
             impacts.push_back(Impact{
                 character,
-                projectile.properties.damage,
+                1.0F,
                 target.hitbox.x + target.hitbox.width / 2.0F,
                 target.hitbox.y - 20.0F,
                 false});

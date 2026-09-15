@@ -1,7 +1,5 @@
 #pragma once
 
-class Player;
-
 struct DamageTextView {
     bool visible;
     float damage;
@@ -12,5 +10,5 @@ struct DamageTextView {
 // 绘制不参与游戏规则计算的屏幕信息和短暂伤害提示。
 class HudRenderer {
 public:
-    void draw(const Player& player, const DamageTextView& damageText) const;
+    void draw(const DamageTextView& damageText) const;
 };

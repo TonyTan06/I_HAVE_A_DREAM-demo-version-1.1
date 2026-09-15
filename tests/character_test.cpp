@@ -2,57 +2,41 @@
 
 #include <gtest/gtest.h>
 
-TEST(CharacterTest, StartsAliveAndUsesDefaultGravityScale) {
-    Character character("Test Character");
-
-    EXPECT_TRUE(character.isAlive());
-    EXPECT_FLOAT_EQ(character.getGravityScale(), 1.0F);
-    EXPECT_FLOAT_EQ(character.getHitboxWidth(), 32.0F);
-    EXPECT_FLOAT_EQ(character.getHitboxHeight(), 48.0F);
-}
-
-TEST(CharacterTest, RejectsNegativeGravityScale) {
-    Character character("Test Character");
-
-    character.setGravityScale(2.0F);
-    character.setGravityScale(-1.0F);
-
-    EXPECT_FLOAT_EQ(character.getGravityScale(), 2.0F);
-}
-
-TEST(CharacterTest, ProvidesAnOverridableRangedAttackFramework) {
-    Character character("Test Character");
-
-    character.rangedAttack();
-
-    SUCCEED();
-}
-
-TEST(CharacterTest, CanLandAtAnElevatedPlatformHeight) {
+TEST(CharacterTest, GravityAndLandingUseWorldGravity) {
     Character character("Character");
+    character.setPosition(0.0F, 100.0F);
+    character.beginFalling();
+
+    character.update(0.1F, 980.0F);
+    EXPECT_NEAR(character.getY(), 90.2F, 0.001F);
+    EXPECT_FALSE(character.isGrounded());
 
     character.landAtHeight(60.0F);
-    EXPECT_TRUE(character.isGrounded());
     EXPECT_FLOAT_EQ(character.getY(), 60.0F);
-
-    character.beginFalling();
-    EXPECT_FALSE(character.isGrounded());
+    EXPECT_TRUE(character.isGrounded());
 }
 
-TEST(CharacterTest, SwapsPositionAndGroundedPhysicsState) {
-    Character first("First");
-    Character second("Second");
-    first.setPosition(10.0F, 60.0F);
-    first.landAtHeight(60.0F);
-    second.setPosition(200.0F, 20.0F);
-    second.beginFalling();
+TEST(CharacterTest, AttackCooldownsAreIndependent) {
+    Character character("Character");
+    EXPECT_TRUE(character.tryBeginMeleeAttack());
+    EXPECT_FALSE(character.tryBeginMeleeAttack());
+    EXPECT_TRUE(character.tryBeginRangedAttack());
 
-    first.swapPositionAndPhysics(second);
+    character.update(1.0F, 980.0F);
+    EXPECT_TRUE(character.isMeleeAttackReady());
+    EXPECT_TRUE(character.isRangedAttackReady());
+}
 
-    EXPECT_FLOAT_EQ(first.getX(), 200.0F);
-    EXPECT_FLOAT_EQ(first.getY(), 20.0F);
-    EXPECT_FALSE(first.isGrounded());
-    EXPECT_FLOAT_EQ(second.getX(), 10.0F);
-    EXPECT_FLOAT_EQ(second.getY(), 60.0F);
-    EXPECT_TRUE(second.isGrounded());
+TEST(CharacterTest, DamageKillsAndDeadCharacterCannotAttack) {
+    Character character("Character");
+    character.takeDamage();
+    EXPECT_FALSE(character.isAlive());
+    EXPECT_FALSE(character.tryBeginMeleeAttack());
+}
+
+TEST(CharacterTest, NegativeGravityScaleIsIgnored) {
+    Character character("Character");
+    character.setGravityScale(0.5F);
+    character.setGravityScale(-1.0F);
+    EXPECT_FLOAT_EQ(character.getGravityScale(), 0.5F);
 }

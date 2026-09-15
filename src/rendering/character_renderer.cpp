@@ -7,19 +7,14 @@
 
 #include <algorithm>
 
-void CharacterRenderer::draw(
+void CharacterRenderer::drawPlayer(
     const Player& player,
-    const Enemy& meleeEnemy,
-    const Enemy& rangedEnemy,
-    const PlayerShadow* shadow,
     float groundY,
     const PlayerSpriteRenderer& playerSpriteRenderer,
-    const CharacterEffectView& effects) const {
-    drawEnemy(meleeEnemy, groundY, BLUE);
-    drawEnemy(rangedEnemy, groundY, GREEN);
-
+    bool attackVisible,
+    float attackRange,
+    float defenseRange) const {
     playerSpriteRenderer.draw(player, groundY, WHITE);
-    const float playerWidth = player.getHitboxWidth();
     const float playerHeight = player.getHitboxHeight();
     const float playerTop = groundY - playerHeight - player.getY();
     if (player.isDodgeCoolingDown()) {
@@ -30,81 +25,43 @@ void CharacterRenderer::draw(
             player.getDodgeCooldownProgress());
     }
 
-    const float playerHealthRatio = player.getHealth() / player.getMaxHealth();
-    DrawRectangle(
-        static_cast<int>(player.getX()),
-        static_cast<int>(playerTop - 10.0F),
-        static_cast<int>(playerWidth),
-        5,
-        DARKGRAY);
-    DrawRectangle(
-        static_cast<int>(player.getX()),
-        static_cast<int>(playerTop - 10.0F),
-        static_cast<int>(
-            playerWidth * std::clamp(playerHealthRatio, 0.0F, 1.0F)),
-        5,
-        GREEN);
-    const float playerEyeX = player.isFacingRight() ? player.getX() + playerWidth - 8.0F : player.getX() + 8.0F;
-    DrawCircle(
-        static_cast<int>(playerEyeX),
-        static_cast<int>(playerTop + 14.0F),
-        3.0F,
-        BLACK);
-
-    if (shadow != nullptr && shadow->isPositionSwapCoolingDown()) {
-        const float shadowTop =
-            groundY - shadow->getHitboxHeight() - shadow->getY();
-        drawBackVerticalCooldownBar(
-            *shadow,
-            shadow->isFacingRight(),
-            shadowTop,
-            shadow->getPositionSwapCooldownProgress());
-    }
-
     drawPlayerBlade(
         player,
         groundY,
-        effects.attackRange,
-        effects.defenseRange,
-        effects.playerAttackVisible);
-    if (shadow != nullptr) {
-        drawPlayerBlade(
-            *shadow,
-            groundY,
-            effects.attackRange,
-            effects.defenseRange,
-            effects.shadowAttackVisible);
-    }
-    if (effects.meleeEnemyAttackVisible) {
-        drawMeleeEnemyBlade(meleeEnemy, groundY, effects.attackRange);
-    }
+        attackRange,
+        defenseRange,
+        attackVisible);
+}
+
+void CharacterRenderer::drawShadow(
+    const PlayerShadow& shadow,
+    float groundY,
+    bool attackVisible,
+    float attackRange,
+    float defenseRange) const {
+    drawPlayerBlade(
+        shadow, groundY, attackRange, defenseRange, attackVisible);
 }
 
 void CharacterRenderer::drawEnemy(
-    const Enemy& enemy, float groundY, Color eyeColor) {
+    const Enemy& enemy,
+    float groundY,
+    Color eyeColor,
+    bool attackVisible,
+    float attackRange) const {
     const float enemyWidth = enemy.getHitboxWidth();
     const float enemyHeight = enemy.getHitboxHeight();
     const float enemyTop = groundY - enemyHeight - enemy.getY();
     const int barX = static_cast<int>(enemy.getX());
     const int barY = static_cast<int>(enemyTop - 10.0F);
-    const bool respawning = !enemy.isAlive() || enemy.isRespawning();
-    const Color bodyColor = respawning ? Color{235, 170, 170, 255} : Color{190, 90, 90, 255};
-    const float barProgress = respawning ? 1.0F - enemy.getRespawnProgress() : enemy.getHealth() / enemy.getMaxHealth();
 
     DrawRectangle(
         static_cast<int>(enemy.getX()),
         static_cast<int>(enemyTop),
         static_cast<int>(enemyWidth),
         static_cast<int>(enemyHeight),
-        bodyColor);
+        RED);
     DrawRectangle(barX, barY, static_cast<int>(enemyWidth), 5, DARKGRAY);
-    DrawRectangle(
-        barX,
-        barY,
-        static_cast<int>(
-            enemyWidth * std::clamp(barProgress, 0.0F, 1.0F)),
-        5,
-        respawning ? YELLOW : RED);
 
     const float eyeX = enemy.isFacingRight() ? enemy.getX() + enemyWidth - 8.0F : enemy.getX() + 8.0F;
     DrawCircle(
@@ -112,6 +69,9 @@ void CharacterRenderer::drawEnemy(
         static_cast<int>(enemyTop + 14.0F),
         3.0F,
         eyeColor);
+    if (attackVisible) {
+        drawEnemyBlade(enemy, groundY, attackRange);
+    }
 }
 
 void CharacterRenderer::drawBackVerticalCooldownBar(
@@ -164,7 +124,7 @@ void CharacterRenderer::drawPlayerBlade(
     }
 }
 
-void CharacterRenderer::drawMeleeEnemyBlade(
+void CharacterRenderer::drawEnemyBlade(
     const Enemy& enemy, float groundY, float attackRange) {
     const float enemyHeight = enemy.getHitboxHeight();
     const float enemyTop = groundY - enemyHeight - enemy.getY();

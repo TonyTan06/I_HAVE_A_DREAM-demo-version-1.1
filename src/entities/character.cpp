@@ -56,7 +56,11 @@ void Character::jump() {
 } //跳跃
 
 void Character::takeDamage() {
-    if (health_ > 0 && Character::getShield() > 0) shield_ -= 1;
+    if (!isAlive()) return;
+    if (shield_ > 0) {
+        shield_ -= 1;
+        return;
+    }
     else if (health_ > 0) health_ -= 1;
 } //受击伤害
 

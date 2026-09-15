@@ -16,14 +16,15 @@ ShadowManager::ShadowManager(const Player& player)
       elapsedLifetime_(0.0F) {
 }
 
-void ShadowManager::update(const Player& player, float deltaTime) {
+void ShadowManager::update(
+    const Player& player, float deltaTime, float worldGravity) {
     // 用相邻两帧坐标差累计实际路程，因此玩家折返移动也会增加进度。
     const float frameHorizontalDistance = std::abs(player.getX() - previousPlayerX_);
     previousPlayerX_ = player.getX();
 
     if (shadow_.has_value()) {
         // 影子存在期间停止记录生成距离，只更新实体和十秒生命周期。
-        shadow_->update(deltaTime);
+        shadow_->update(deltaTime, worldGravity);
         if (shadow_->getY() <= 0.0F) {
             shadow_->land();
         }
@@ -62,6 +63,12 @@ void ShadowManager::resetPlayerTracking(const Player& player) {
     recordedPlayerY_ = player.getY();
     recordedFacingRight_ = player.isFacingRight();
     accumulatedHorizontalDistance_ = 0.0F;
+}
+
+void ShadowManager::reset(const Player& player) {
+    shadow_.reset();
+    resetPlayerTracking(player);
+    elapsedLifetime_ = 0.0F;
 }
 
 void ShadowManager::draw(

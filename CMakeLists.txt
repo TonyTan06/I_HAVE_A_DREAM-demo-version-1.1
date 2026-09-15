@@ -52,10 +52,8 @@ set(GAME_DOMAIN_SOURCES
     src/entities/character.cpp
     src/entities/enemy.cpp
     src/entities/item.cpp
-    src/entities/melee_enemy.cpp
     src/entities/player.cpp
     src/entities/player_shadow.cpp
-    src/entities/ranged_enemy.cpp
     src/input/player_controller.cpp
     src/rendering/character_renderer.cpp
     src/rendering/hud_renderer.cpp
@@ -66,6 +64,7 @@ set(GAME_DOMAIN_SOURCES
     src/systems/projectile_system.cpp
     src/systems/save_game_store.cpp
     src/systems/shadow_manager.cpp
+    src/world/game_world.cpp
 )
 
 add_library(game_domain ${GAME_DOMAIN_SOURCES})

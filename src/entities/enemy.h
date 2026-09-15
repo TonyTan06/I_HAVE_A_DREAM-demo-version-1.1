@@ -12,8 +12,7 @@ struct LootItem {
     float dropChance; //掉落概率，0.0F - 1.0
 };
 
-// 所有敌方兵种的公共基类：保存阵营、索敌、朝向、攻击冷却和复活状态。
-// MeleeEnemy 与 RangedEnemy 只需要设置各自数值，不再重复实现这些公共行为。
+// 敌方角色的基础类，保存索敌和掉落配置；具体种类由后续关卡数据确定。
 class Enemy : public Character {
 
 public:
