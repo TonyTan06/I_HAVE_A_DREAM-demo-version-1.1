@@ -1,8 +1,74 @@
-# 更新日志 （你们写完代码后写一下更新日志，AI写就完了） 
+# 更新日志
 
 本文档记录 `I_HAVE_A_DREAM-demo-version-1.0` 的主要功能变化。
 
 项目目前尚未创建正式的 Git Tag 或 GitHub Release，因此现阶段按照日期和开发阶段整理。
+较早的条目记录当时的实现；当前代码结构以最近的条目为准。
+
+## 2026-09-16：GameState、GameEvent 与帧反馈
+
+### 新增
+
+- 保留八个高层 `GameState`；`GameEngine` 持有唯一的 `GameStateManager`，从 `Booting` 开始，并通过 `transitionTo()` 切换加载、游玩、暂停、继续和退出状态。`GameStateChangedEvent` 继续向监听者提供切换前后的状态。
+- 新增 `GameEvent` 枚举，定义玩家死亡与复活、关卡、Boss 和游戏完成等一次性全局事件；当前只有 `PlayerDied` 和 `PlayerRespawned` 会真实产生。
+- `GameWorldFrameResult` 新增 `std::vector<GameEvent> events`。玩家死亡并在同一帧复活时，按实际顺序返回 `PlayerDied`、`PlayerRespawned`；普通帧不产生全局事件。
+- 补充 `GameEvent` 枚举、死亡／复活事件顺序和普通帧无事件测试。
+
+### 调整
+
+- `GameScene::updateWithInput()` 保留视觉计时和 `GameWorld::update()` 调用；新增 private `handleFrameResult()` 处理近战特效与伤害文字。全局 `events` 目前没有实际消费者，场景暂不处理。
+- 保留 `CombatSystem::AttackResult`、`PlayerActionFrameResult` 和 `GameWorldFrameResult::DamageEvent` 的局部结果职责；只整理相关注释，未引入 EventBus，也未改变 `GameStateManager` 的监听机制。
+
+## 2026-09-15：输入、实体、Systems 与 GameWorld V1 迁移
+
+### 输入与实体
+
+- 新增 `KeyBinding`、`KeyboardBindings`、`GamepadBindings` 和 `InputBindings`。键盘默认使用 `A/←`、`D/→`、空格、`J`、`K`、`U`、`L`；手柄默认将跳跃、近战、远程和闪避绑定到右侧面键的下、左、上、右，防御绑定到左肩键。
+- `PlayerController` 通过长期存在的 `InputBindings` 引用读取键位。第一版只读取手柄 0：左摇杆 X 轴使用 `0.2F` deadzone，并与 D-Pad 左右合并移动；未连接手柄时安全返回空输入。键盘与手柄的七个设备无关动作继续按字段 OR 合并，保留 Held／Pressed 语义。
+- 删除旧的 `MeleeEnemy`、`RangedEnemy`、`HybridEnemy` 及固定敌人测试；敌人种类尚未确定，运行时敌人列表允许为空。`Character`、`Player`、`PlayerShadow` 的更新统一接收 `worldGravity`，不恢复旧攻击伤害和最大生命 API。
+- `PlayerShadow` 在生成时复制玩家的近战、远程和防御范围；旧 Shadow 技能输入与尚未实现的历史攻击回放未接入当前七动作输入。
+
+### Gameplay 与场景
+
+- 新增 `GameWorld`，持有 Player、出生点、ShadowManager、PlayerActionSystem、CombatSystem、ProjectileSystem、PlatformSystem、主地面和空的 `std::vector<std::unique_ptr<Enemy>>`。`WORLD_GRAVITY = 980.0F` 由 GameWorld 传给角色和 Shadow 更新。
+- 将玩家动作、物理与落地、友方弹道、战斗判定、弹道结算、Shadow 生命周期和 prototype 复活迁入 `GameWorld::update()`。`GameScene` 只负责输入、绘制顺序、视觉反馈与存档，并保留可注入输入的 `updateWithInput()`。
+- `CombatSystem` 使用当前基础 `Enemy&` 和角色攻击 API；近战与防御范围直接读取攻击者和 Player 属性，移除系统内重复范围字段及双参数构造。`ProjectileSystem` 按当前 `Character::takeDamage()` 结算一次有效受击。
+- Player 死亡后恢复当前基础生命及动作状态，在出生点落地，并通过 `ProjectileSystem::clear()` 和 `ShadowManager::reset()` 清除上一条生命的弹道、影子和记录状态。
+- `GameScene::save()` 从 GameWorld 的 Player 读取位置、生命和朝向；快照中等级、经验和金币仍为存档格式默认值，当前 Player 已没有这些属性。
+
+### Rendering 与构建验证
+
+- `CharacterRenderer` 拆分为 `drawPlayer()`、`drawShadow()`、`drawEnemy()`，移除旧固定敌人视图和 `CharacterEffectView`；敌人刀刃绘制统一为 `drawEnemyBlade()`。HUD 不再接收无用的 Player 参数；`PlayerSpriteRenderer` 与伤害文字视图保持原有职责。
+- 使用独立的 `build-arm64/` 重新配置并构建 Apple Silicon 产物，避免旧 `build/` 中的 x86_64 CMake/Ninja 缓存；未通过修改 gameplay 源码或关闭 `-Werror` 解决架构问题。
+- 将测试迁移到当前实体、输入、Systems、GameWorld 和 GameScene API，移除依赖已删除敌人类型的测试。2026-09-16 的完整 arm64 构建成功，最新 `ctest` 为 **74/74 通过**。
+
+## 2026-08-03：游戏流程状态
+
+### 新增
+
+- 新增 `GameState`，统一描述启动、菜单、加载、游玩、暂停、胜利、失败和退出等高层游戏流程状态。
+- 新增 `GameStateManager` 与 `GameStateChangedEvent`；状态实际变化时会向监听者发送前后状态，供后续音乐、UI 和场景管理系统订阅。
+- `GameEngine` 现在可查询全局游戏状态；当前启动流程会依次标记为 `Booting → Loading → Playing → Exiting`。
+- 补充状态切换、重复状态过滤、多监听者、取消监听和空监听者校验测试。
+- 新增 `Esc` 暂停菜单，提供继续游戏、设置、保存、保存并退出四个选项；支持键盘和鼠标操作。
+- 设置页新增窗口与全屏切换；菜单保持 `Paused` 状态，不额外污染全局状态枚举。
+- 新增版本化玩家存档快照，保存位置、生命、等级、经验、金币和朝向；存档先写临时文件再安全替换正式文件。
+- 存档默认写入各平台用户数据目录；保存失败时会保留暂停菜单，“保存并退出”不会绕过失败直接关闭游戏。
+- 补充暂停菜单导航、嵌套状态事件、存档写入替换、失败保护和 `GameScene` 快照集成测试。
+- 新增 `PlayerActionSystem`，集中解释设备无关操作，并控制玩家与技能 1 影子的移动、跳跃、攻击、防御和闪避。
+- 补充动作方向冲突、防御抑制攻击、闪避、影子同步和技能 2 同帧交换顺序测试。
+
+### 调整
+
+- raylib 的默认 `Esc` 退出键已关闭；窗口关闭按钮仍可正常退出。
+- `Paused` 状态下不再更新游戏场景，仅绘制冻结画面和暂停菜单覆盖层。
+- 项目自有 `src/` 与 `tests/` 不再使用 C++ lambda；局部逻辑改为具名成员 helper、静态 helper 或具名回调 helper，并保持原有回调生命周期与状态派发顺序。
+- `PlayerInputState` 拆分为独立的输入数据对象；`PlayerController` 只负责设备采集和多设备状态合并。
+- 删除 `Player::applyInput()` 与 `PlayerShadow::applyInput()`；角色实体不再引用输入控制器、输入状态或按键方向类型。
+- `GameScene::update()` 拆分为十个具名帧阶段；主更新只保留动作、物理、表现、战斗、弹道、生命周期和奖励的顺序编排。
+- 新增 `GameScene::updateWithInput()`，让其他控制器、AI、回放和测试可以直接提交 `PlayerInputState` 并复用同一帧管线。
+- 远程敌人的索敌、转向和攻击冷却判定下沉到 `CombatSystem`；场景只保留关卡相关的弹道参数与生成工作。
+- 补充场景输入同帧进入物理、玩家边界限制，以及远程敌人目标与冷却行为测试。
 
 ## 2026-07-23：玩家双帧测试素材
 
@@ -28,7 +94,7 @@
 - 新增 `CombatSystem`，统一管理敌军最近目标选择、近战攻击框、命中检测、玩家防御，以及玩家、敌军和影子之间的近战伤害结算。
 - 新增 `PlayerController` 和设备无关的 `PlayerInputState`，统一检测玩家输入；当前接入键盘，并提供多设备状态合并接口，为后续手柄等输入设备预留扩展位置。
 - 新增 `PlatformSystem`，管理单向平台的绘制、顶部落地和走出边缘后的下落；角色可以从平台下方跳过并从上方落在平台上。
-- `PlayerShadow` 自己保存并执行影子技能；当前默认启用技能 1，测试阶段可按数字键 `1` 立即切换场上影子，技能 1 会同步玩家的移动、跳跃、近战、远程、防御和闪避输入。
+- `PlayerShadow` 自己保存影子技能状态；当前默认启用技能 1，测试阶段可按数字键 `1` 立即切换场上影子，`PlayerActionSystem` 会让技能 1 同步玩家的移动、跳跃、近战、远程、防御和闪避动作。
 - 新增影子技能 2：场上存在影子时按数字键 `2`，玩家与影子立即交换位置、竖直速度和落地状态，随后自动切回技能 1；技能冷却 `10 秒`，影子背向显示与闪避一致的绿色竖直冷却条。
 - 敌军新增等级与按兵种读取的经验奖励；当前近战兵和远程兵均可在构造时指定等级，击杀经验统一使用 `f(x) = 5x`，其中 `x` 为敌军等级。
 - 新增 `Scene`，集中管理平台、玩家输入、更新与 raylib 绘制流程。

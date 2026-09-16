@@ -17,7 +17,7 @@ def main() -> int:
 
     excluded = set(args.exclude)
     source_files = sorted(
-        path for path in args.src_dir.glob("*.cpp")
+        path for path in args.src_dir.rglob("*.cpp")
         if path.name not in excluded
     )
 

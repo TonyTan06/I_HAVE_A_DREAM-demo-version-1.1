@@ -1,82 +1,75 @@
-#include "combat_system.h"
-
-#include "melee_enemy.h"
-#include "player.h"
+#include "entities/player.h"
+#include "systems/combat_system.h"
+#include "test_enemy_fixture.h"
 
 #include <gtest/gtest.h>
 
-namespace {
-CombatSystem makeCombatSystem() {
-    return CombatSystem(16.0F, 8.0F);
-}
-} // namespace
-
-TEST(CombatSystemTest, FindsNearestValidEnemyTarget) {
+TEST(CombatSystemTest, PlayerMeleeUsesCurrentHitAndCooldownAPI) {
     Player player("Player");
-    player.setPosition(100.0F, 0.0F);
-    MeleeEnemy enemy(player);
-    enemy.setPosition(0.0F, 0.0F);
-    CombatSystem system = makeCombatSystem();
+    TestEnemy enemy;
+    enemy.setPosition(236.0F, 0.0F);
+    CombatSystem combat;
 
-    EXPECT_EQ(system.findNearestEnemyTarget(enemy, player), &player);
-}
+    const auto first = combat.playerMeleeAttack(player, {&enemy}, 360.0F);
+    EXPECT_TRUE(first.attackPerformed);
+    EXPECT_TRUE(first.hit);
+    EXPECT_EQ(enemy.getHealth(), 1);
+    EXPECT_FLOAT_EQ(first.damage, 1.0F);
 
-TEST(CombatSystemTest, PlayerMeleeTargetsEnemy) {
-    Player player("Player");
-    player.setPosition(100.0F, 0.0F);
-    MeleeEnemy enemy(player);
-    // 玩家当前宽 96px，所以右向 16px 近战框从 x=196 开始。
-    enemy.setPosition(196.0F, 0.0F);
-    CombatSystem system = makeCombatSystem();
-
-    const auto result = system.playerMeleeAttack(player, {&enemy}, 360.0F);
-
-    EXPECT_EQ(result.target, &enemy);
-    EXPECT_FLOAT_EQ(enemy.getHealth(), enemy.getMaxHealth() - player.getAttackDamage());
+    const auto second = combat.playerMeleeAttack(player, {&enemy}, 360.0F);
+    EXPECT_FALSE(second.attackPerformed);
+    EXPECT_EQ(enemy.getHealth(), 1);
 }
 
-TEST(CombatSystemTest, EnemyMeleeCanBeBlockedByPlayerDefense) {
+TEST(CombatSystemTest, EnemyDetectionHonorsConfiguredRange) {
     Player player("Player");
+    TestEnemy enemy;
+    enemy.setPosition(100.0F, 0.0F);
+    enemy.setDetectionRangeForTest(40.0F);
+    CombatSystem combat;
+
+    player.setPosition(141.0F, 0.0F);
+    EXPECT_EQ(combat.findNearestEnemyTarget(enemy, player), nullptr);
     player.setPosition(140.0F, 0.0F);
+    EXPECT_EQ(combat.findNearestEnemyTarget(enemy, player), &player);
+}
+
+TEST(CombatSystemTest, EnemyMeleeCanBeBlocked) {
+    Player player("Player");
     player.setDefending(true);
-    MeleeEnemy enemy(player);
-    // 敌人在玩家右侧向左挥刀，与玩家右向 8px 防御框相交。
+    TestEnemy enemy;
     enemy.setPosition(252.0F, 0.0F);
-    enemy.update(0.5F);
-    CombatSystem system = makeCombatSystem();
+    CombatSystem combat;
 
-    const auto result = system.enemyMeleeAttack(enemy, player, 360.0F);
-
+    const auto result = combat.enemyMeleeAttack(enemy, player, 360.0F);
+    EXPECT_TRUE(result.attackPerformed);
     EXPECT_TRUE(result.blocked);
-    EXPECT_FLOAT_EQ(player.getHealth(), player.getMaxHealth());
+    EXPECT_EQ(player.getHealth(), 1);
 }
 
-TEST(CombatSystemTest, MeleeEnemyOnlyDetectsTargetsWithinItsOwnRange) {
+TEST(CombatSystemTest, EnemyRangedRequiresCapabilityAndCooldown) {
     Player player("Player");
-    MeleeEnemy enemy(player);
-    CombatSystem system = makeCombatSystem();
+    TestEnemy enemy;
     enemy.setPosition(100.0F, 0.0F);
+    CombatSystem combat;
 
-    player.setPosition(251.0F, 0.0F);
-    EXPECT_EQ(system.findNearestEnemyTarget(enemy, player), nullptr);
-
-    player.setPosition(250.0F, 0.0F);
-    EXPECT_EQ(system.findNearestEnemyTarget(enemy, player), &player);
+    EXPECT_TRUE(combat.tryEnemyRangedAttack(enemy, player).projectileRequested);
+    EXPECT_FALSE(combat.tryEnemyRangedAttack(enemy, player).projectileRequested);
+    enemy.update(1.0F, 980.0F);
+    enemy.setRangedRangeForTest(0.0F);
+    EXPECT_FALSE(combat.tryEnemyRangedAttack(enemy, player).projectileRequested);
 }
 
-TEST(CombatSystemTest, MeleeEnemyTurnsRightBeforeHittingRightSideTarget) {
+TEST(CombatSystemTest, HitboxesUseCharacterRangesWithoutSystemLimits) {
     Player player("Player");
-    MeleeEnemy enemy(player);
-    CombatSystem system = makeCombatSystem();
-    enemy.setPosition(100.0F, 0.0F);
-    player.setPosition(132.0F, 0.0F);
-    enemy.update(0.5F);
+    CombatSystem combat;
 
-    const auto result = system.enemyMeleeAttack(enemy, player, 360.0F);
-
-    EXPECT_TRUE(enemy.isFacingRight());
-    EXPECT_TRUE(result.hit);
-    EXPECT_EQ(result.target, &player);
-    EXPECT_FLOAT_EQ(player.getHealth(),
-                    player.getMaxHealth() - enemy.getAttackDamage());
+    const Rectangle melee =
+        combat.makeMeleeAttackHitbox(player, true, 360.0F);
+    const Rectangle defense =
+        combat.makePlayerDefenseHitbox(player, 360.0F);
+    EXPECT_FLOAT_EQ(melee.width, player.getMeleeAttackRange());
+    EXPECT_FLOAT_EQ(defense.width, player.getDefenseRange());
+    EXPECT_FLOAT_EQ(melee.width, 48.0F);
+    EXPECT_FLOAT_EQ(defense.width, 16.0F);
 }

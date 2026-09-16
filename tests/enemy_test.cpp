@@ -1,39 +1,20 @@
-#include "enemy.h"
+#include "test_enemy_fixture.h"
 
 #include <gtest/gtest.h>
 
-TEST(EnemyTest, StartsAliveAndHasNoLootByDefault) {
-    Enemy enemy("Training Dummy");
-
+TEST(EnemyTest, BaseEnemyCarriesEnemyFactionAndDetectionRange) {
+    TestEnemy enemy;
     EXPECT_TRUE(enemy.isAlive());
+    EXPECT_EQ(enemy.getFaction(), Faction::Enemy);
+    EXPECT_FALSE(enemy.isFacingRight());
+    EXPECT_FLOAT_EQ(enemy.getDetectionRange(), 200.0F);
     EXPECT_TRUE(enemy.dropLoot().empty());
-    EXPECT_FALSE(enemy.isFacingRight());
 }
 
-TEST(EnemyTest, FacesTowardTargetsOnEitherSide) {
-    Enemy enemy("Enemy");
-    Character target("Target");
-    enemy.setPosition(300.0F, 0.0F);
-
-    target.setPosition(400.0F, 0.0F);
-    enemy.faceToward(target);
-    EXPECT_TRUE(enemy.isFacingRight());
-
-    target.setPosition(200.0F, 0.0F);
-    enemy.faceToward(target);
-    EXPECT_FALSE(enemy.isFacingRight());
-}
-
-TEST(EnemyTest, CalculatesExperienceRewardFromEnemyLevel) {
-    Enemy levelThreeEnemy("Veteran", 3);
-
-    EXPECT_EQ(levelThreeEnemy.getLevel(), 3);
-    EXPECT_EQ(levelThreeEnemy.getExperienceReward(), 15);
-}
-
-TEST(EnemyTest, ClampsInvalidLevelToOneForExperienceReward) {
-    Enemy invalidLevelEnemy("Invalid", 0);
-
-    EXPECT_EQ(invalidLevelEnemy.getLevel(), 1);
-    EXPECT_EQ(invalidLevelEnemy.getExperienceReward(), 5);
+TEST(EnemyTest, BaseEnemyUsesCharacterAttackCooldowns) {
+    TestEnemy enemy;
+    EXPECT_TRUE(enemy.tryBeginMeleeAttack());
+    EXPECT_FALSE(enemy.tryBeginMeleeAttack());
+    enemy.update(1.0F, 980.0F);
+    EXPECT_TRUE(enemy.tryBeginMeleeAttack());
 }

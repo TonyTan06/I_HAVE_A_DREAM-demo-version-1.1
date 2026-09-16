@@ -1,5 +1,5 @@
-#include "character.h"
-#include "platform_system.h"
+#include "entities/character.h"
+#include "systems/platform_system.h"
 
 #include <gtest/gtest.h>
 

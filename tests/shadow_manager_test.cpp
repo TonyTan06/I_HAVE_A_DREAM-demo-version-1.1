@@ -1,61 +1,54 @@
-#include "shadow_manager.h"
-
-#include "player.h"
+#include "entities/player.h"
+#include "systems/shadow_manager.h"
 
 #include <gtest/gtest.h>
 
-TEST(ShadowManagerTest, GeneratesShadowAtRecordedPointAfterThreeHundredPixels) {
+TEST(ShadowManagerTest, SpawnsAtRecordedPointAfterTravelDistance) {
     Player player("Player");
-    ShadowManager manager(player);
-    const float recordedX = player.getX();
+    ShadowManager shadows(player);
+    player.setPosition(440.0F, 0.0F);
 
-    player.moveRight(1.25F);
-    manager.update(player, 0.0F);
-
-    ASSERT_TRUE(manager.hasShadow());
-    ASSERT_NE(manager.getShadow(), nullptr);
-    EXPECT_FLOAT_EQ(manager.getShadow()->getX(), recordedX);
+    shadows.update(player, 0.0F, 980.0F);
+    ASSERT_TRUE(shadows.hasShadow());
+    ASSERT_NE(shadows.getShadow(), nullptr);
+    EXPECT_FLOAT_EQ(shadows.getShadow()->getX(), 140.0F);
 }
 
-TEST(ShadowManagerTest, RemovesShadowAfterTenSecondsAndStartsNewCycle) {
+TEST(ShadowManagerTest, RemovesShadowAfterTenSeconds) {
     Player player("Player");
-    ShadowManager manager(player);
-    player.moveRight(1.25F);
-    manager.update(player, 0.0F);
+    ShadowManager shadows(player);
+    player.setPosition(440.0F, 0.0F);
+    shadows.update(player, 0.0F, 980.0F);
+    ASSERT_TRUE(shadows.hasShadow());
 
-    manager.update(player, 10.0F);
-
-    EXPECT_FALSE(manager.hasShadow());
-    EXPECT_EQ(manager.getShadow(), nullptr);
+    shadows.update(player, 10.0F, 980.0F);
+    EXPECT_FALSE(shadows.hasShadow());
 }
 
-TEST(ShadowManagerTest, GeneratedShadowOwnsItsDefaultSkill) {
+TEST(ShadowManagerTest, ForwardsWorldGravityToShadow) {
     Player player("Player");
-    ShadowManager manager(player);
-    player.moveRight(1.25F);
-    manager.update(player, 0.0F);
+    ShadowManager shadows(player);
+    player.setPosition(440.0F, 0.0F);
+    shadows.update(player, 0.0F, 980.0F);
+    ASSERT_NE(shadows.getShadow(), nullptr);
+    shadows.getShadow()->setPosition(140.0F, 100.0F);
+    shadows.getShadow()->beginFalling();
 
-    ASSERT_NE(manager.getShadow(), nullptr);
-    EXPECT_EQ(manager.getShadow()->getActiveSkill(),
-              ShadowSkill::SynchronizePlayerActions);
+    shadows.update(player, 0.1F, 980.0F);
+    EXPECT_NEAR(shadows.getShadow()->getY(), 90.2F, 0.001F);
 }
 
-TEST(ShadowManagerTest, CountsOnlyThirtyThreePercentOfDodgeDistance) {
+TEST(ShadowManagerTest, ResetRemovesShadowAndStartsNewRecording) {
     Player player("Player");
-    ShadowManager manager(player);
+    ShadowManager shadows(player);
+    player.setPosition(440.0F, 0.0F);
+    shadows.update(player, 0.0F, 980.0F);
+    ASSERT_TRUE(shadows.hasShadow());
 
-    player.startDodge(true);
-    player.update(0.2F); // 闪避 240px，只累计 79.2px。
-    manager.update(player, 0.2F);
-    EXPECT_FALSE(manager.hasShadow());
-
-    player.moveRight(0.9F); // 普通移动 216px，累计为 295.2px。
-    player.update(0.0F);
-    manager.update(player, 0.0F);
-    EXPECT_FALSE(manager.hasShadow());
-
-    player.moveRight(0.02F); // 再移动 4.8px，总累计达到 300px。
-    player.update(0.0F);
-    manager.update(player, 0.0F);
-    EXPECT_TRUE(manager.hasShadow());
+    shadows.reset(player);
+    EXPECT_FALSE(shadows.hasShadow());
+    player.setPosition(740.0F, 0.0F);
+    shadows.update(player, 0.0F, 980.0F);
+    ASSERT_NE(shadows.getShadow(), nullptr);
+    EXPECT_FLOAT_EQ(shadows.getShadow()->getX(), 440.0F);
 }

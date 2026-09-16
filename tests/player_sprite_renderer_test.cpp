@@ -1,4 +1,4 @@
-#include "player_sprite_renderer.h"
+#include "rendering/player_sprite_renderer.h"
 
 #include <gtest/gtest.h>
 
@@ -14,12 +14,12 @@ TEST(PlayerSpriteRendererTest, UsesTopFrameForIdleAndBottomFrameForWalking) {
     EXPECT_FLOAT_EQ(walking.height, 128.0F);
 }
 
-TEST(PlayerSpriteRendererTest, FlipsNativeLeftFacingFrameWhenPlayerFacesRight) {
+TEST(PlayerSpriteRendererTest, FlipsNativeRightFacingFrameWhenPlayerFacesLeft) {
     const Rectangle facingLeft = PlayerSpriteRenderer::makeSourceRectangle(
         96.0F, 256.0F, false, false);
     const Rectangle facingRight = PlayerSpriteRenderer::makeSourceRectangle(
         96.0F, 256.0F, false, true);
 
-    EXPECT_FLOAT_EQ(facingLeft.width, 96.0F);
-    EXPECT_FLOAT_EQ(facingRight.width, -96.0F);
+    EXPECT_FLOAT_EQ(facingLeft.width, -96.0F);
+    EXPECT_FLOAT_EQ(facingRight.width, 96.0F);
 }
