@@ -39,5 +39,6 @@ private:
     static constexpr float ATTACK_EFFECT_LIFETIME = 0.15F;
 
     static void updateTimer(float& remainingTime, float deltaTime);
+    void handleFrameResult(const GameWorldFrameResult& result);
     void showDamageText(float damage, float textX, float textY);
 };

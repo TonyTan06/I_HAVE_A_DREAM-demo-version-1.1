@@ -18,7 +18,7 @@ enum class GameState {
     Exiting
 };
 
-// 每次高层状态真正发生变化时发送给监听者，例如未来的音乐或 UI 系统。
+// 表示全局 GameState 的一次状态切换，包含切换前后的状态。
 struct GameStateChangedEvent {
     GameState previousState;
     GameState currentState;

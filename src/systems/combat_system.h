@@ -10,6 +10,7 @@
 // 攻击范围由角色属性提供；GameWorld 协调弹道生成，GameScene 负责视觉反馈。
 class CombatSystem {
 public:
+    // 攻击判定返回给直接调用者 GameWorld 的局部结果。
     struct AttackResult {
         bool attackPerformed; // 是否实际执行了一次攻击；敌人无目标挥刀时也为 true
         bool hit; // 攻击是否命中了可受伤目标

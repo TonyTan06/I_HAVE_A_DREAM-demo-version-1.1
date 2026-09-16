@@ -39,7 +39,7 @@ GameWorldFrameResult GameWorld::update(
     updateProjectiles(deltaTime, frameResult);
     updatePlayerMelee(actions.playerMeleeAttackRequested, frameResult);
     updateShadowLifecycleAndPhysics(deltaTime);
-    respawnPlayerIfDefeated();
+    respawnPlayerIfDefeated(frameResult);
     return frameResult;
 }
 
@@ -210,13 +210,16 @@ void GameWorld::updatePlayerMelee(
     }
 }
 
-void GameWorld::respawnPlayerIfDefeated() {
+void GameWorld::respawnPlayerIfDefeated(
+    GameWorldFrameResult& frameResult) {
     if (player_.isAlive()) return;
+    frameResult.events.push_back(GameEvent::PlayerDied);
     player_.revive();
     player_.setPosition(playerSpawnX_, playerSpawnY_);
     player_.land();
     projectileSystem_.clear();
     shadowManager_.reset(player_);
+    frameResult.events.push_back(GameEvent::PlayerRespawned);
 }
 
 void GameWorld::updateShadowLifecycleAndPhysics(float deltaTime) {

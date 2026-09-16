@@ -38,12 +38,16 @@ TEST(GameWorldTest, DefeatedPlayerRespawnsAtInitialPoint) {
     world.getPlayer().takeDamage();
     ASSERT_FALSE(world.getPlayer().isAlive());
 
-    world.update(PlayerInputState{}, 0.0F);
+    const GameWorldFrameResult result =
+        world.update(PlayerInputState{}, 0.0F);
     EXPECT_TRUE(world.getPlayer().isAlive());
     EXPECT_EQ(world.getPlayer().getHealth(), 1);
     EXPECT_FLOAT_EQ(world.getPlayer().getX(), 140.0F);
     EXPECT_EQ(world.getProjectileSystem().getProjectileCount(), 0U);
     EXPECT_EQ(world.getShadow(), nullptr);
+    ASSERT_EQ(result.events.size(), 2U);
+    EXPECT_EQ(result.events[0], GameEvent::PlayerDied);
+    EXPECT_EQ(result.events[1], GameEvent::PlayerRespawned);
 }
 
 TEST(GameWorldTest, FatalProjectilePreventsMeleeBeforeRespawn) {
@@ -58,4 +62,16 @@ TEST(GameWorldTest, FatalProjectilePreventsMeleeBeforeRespawn) {
     EXPECT_FALSE(result.playerMeleeAttackPerformed);
     EXPECT_TRUE(result.damage.occurred);
     EXPECT_TRUE(world.getPlayer().isAlive());
+    ASSERT_EQ(result.events.size(), 2U);
+    EXPECT_EQ(result.events[0], GameEvent::PlayerDied);
+    EXPECT_EQ(result.events[1], GameEvent::PlayerRespawned);
+}
+
+TEST(GameWorldTest, NormalFrameProducesNoGlobalEvents) {
+    GameWorld world;
+
+    const GameWorldFrameResult result =
+        world.update(PlayerInputState{}, 0.0F);
+
+    EXPECT_TRUE(result.events.empty());
 }

@@ -4,7 +4,7 @@
 
 class Player;
 
-// GameWorld 用该结果继续处理命中判定，并向 Scene 提供视觉反馈。
+// applyActions 返回给直接调用者 GameWorld 的局部结果。
 struct PlayerActionFrameResult {
     bool playerMeleeAttackRequested = false;
 };

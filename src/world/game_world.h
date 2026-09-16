@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/game_event.h"
 #include "entities/enemy.h"
 #include "entities/player.h"
 #include "input/player_input_state.h"
@@ -13,6 +14,8 @@
 #include <memory>
 #include <vector>
 
+// 返回当前帧的局部反馈和真正发生的全局 gameplay 事件。
+// events 仅向上层报告事件，不是 EventBus。
 struct GameWorldFrameResult {
     struct DamageEvent {
         bool occurred = false;
@@ -22,6 +25,7 @@ struct GameWorldFrameResult {
     } damage;
 
     bool playerMeleeAttackPerformed = false;
+    std::vector<GameEvent> events;
 };
 
 // 当前运行中的 gameplay 世界；输入读取、绘制和存档由 GameScene 负责。
@@ -74,7 +78,7 @@ private:
     void updatePlayerMelee(
         bool requested, GameWorldFrameResult& frameResult);
     void updateShadowLifecycleAndPhysics(float deltaTime);
-    void respawnPlayerIfDefeated();
+    void respawnPlayerIfDefeated(GameWorldFrameResult& frameResult);
     Rectangle makeCharacterHitbox(const Character& character) const;
     static void recordDamage(
         GameWorldFrameResult& frameResult,

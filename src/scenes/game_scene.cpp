@@ -40,16 +40,21 @@ void GameScene::updateWithInput(
     updateTimer(damageTextElapsedTime_, deltaTime);
     updateTimer(attackEffectElapsedTime_, deltaTime);
 
-    const GameWorldFrameResult frameResult =
+    const GameWorldFrameResult result =
         gameWorld_.update(input, deltaTime);
-    if (frameResult.playerMeleeAttackPerformed) {
+    handleFrameResult(result);
+}
+
+// 处理本帧 Scene 视觉反馈；全局 GameEvent 待有实际消费者时再接入。
+void GameScene::handleFrameResult(const GameWorldFrameResult& result) {
+    if (result.playerMeleeAttackPerformed) {
         attackEffectElapsedTime_ = ATTACK_EFFECT_LIFETIME;
     }
-    if (frameResult.damage.occurred) {
+    if (result.damage.occurred) {
         showDamageText(
-            frameResult.damage.damage,
-            frameResult.damage.x,
-            frameResult.damage.y);
+            result.damage.damage,
+            result.damage.x,
+            result.damage.y);
     }
 }
 
