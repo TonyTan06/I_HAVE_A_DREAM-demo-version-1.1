@@ -1,8 +1,46 @@
-# 更新日志 （你们写完代码后写一下更新日志，AI写就完了） 
+# 更新日志
 
 本文档记录 `I_HAVE_A_DREAM-demo-version-1.0` 的主要功能变化。
 
 项目目前尚未创建正式的 Git Tag 或 GitHub Release，因此现阶段按照日期和开发阶段整理。
+较早的条目记录当时的实现；当前代码结构以最近的条目为准。
+
+## 2026-09-16：GameState、GameEvent 与帧反馈
+
+### 新增
+
+- 保留八个高层 `GameState`；`GameEngine` 持有唯一的 `GameStateManager`，从 `Booting` 开始，并通过 `transitionTo()` 切换加载、游玩、暂停、继续和退出状态。`GameStateChangedEvent` 继续向监听者提供切换前后的状态。
+- 新增 `GameEvent` 枚举，定义玩家死亡与复活、关卡、Boss 和游戏完成等一次性全局事件；当前只有 `PlayerDied` 和 `PlayerRespawned` 会真实产生。
+- `GameWorldFrameResult` 新增 `std::vector<GameEvent> events`。玩家死亡并在同一帧复活时，按实际顺序返回 `PlayerDied`、`PlayerRespawned`；普通帧不产生全局事件。
+- 补充 `GameEvent` 枚举、死亡／复活事件顺序和普通帧无事件测试。
+
+### 调整
+
+- `GameScene::updateWithInput()` 保留视觉计时和 `GameWorld::update()` 调用；新增 private `handleFrameResult()` 处理近战特效与伤害文字。全局 `events` 目前没有实际消费者，场景暂不处理。
+- 保留 `CombatSystem::AttackResult`、`PlayerActionFrameResult` 和 `GameWorldFrameResult::DamageEvent` 的局部结果职责；只整理相关注释，未引入 EventBus，也未改变 `GameStateManager` 的监听机制。
+
+## 2026-09-15：输入、实体、Systems 与 GameWorld V1 迁移
+
+### 输入与实体
+
+- 新增 `KeyBinding`、`KeyboardBindings`、`GamepadBindings` 和 `InputBindings`。键盘默认使用 `A/←`、`D/→`、空格、`J`、`K`、`U`、`L`；手柄默认将跳跃、近战、远程和闪避绑定到右侧面键的下、左、上、右，防御绑定到左肩键。
+- `PlayerController` 通过长期存在的 `InputBindings` 引用读取键位。第一版只读取手柄 0：左摇杆 X 轴使用 `0.2F` deadzone，并与 D-Pad 左右合并移动；未连接手柄时安全返回空输入。键盘与手柄的七个设备无关动作继续按字段 OR 合并，保留 Held／Pressed 语义。
+- 删除旧的 `MeleeEnemy`、`RangedEnemy`、`HybridEnemy` 及固定敌人测试；敌人种类尚未确定，运行时敌人列表允许为空。`Character`、`Player`、`PlayerShadow` 的更新统一接收 `worldGravity`，不恢复旧攻击伤害和最大生命 API。
+- `PlayerShadow` 在生成时复制玩家的近战、远程和防御范围；旧 Shadow 技能输入与尚未实现的历史攻击回放未接入当前七动作输入。
+
+### Gameplay 与场景
+
+- 新增 `GameWorld`，持有 Player、出生点、ShadowManager、PlayerActionSystem、CombatSystem、ProjectileSystem、PlatformSystem、主地面和空的 `std::vector<std::unique_ptr<Enemy>>`。`WORLD_GRAVITY = 980.0F` 由 GameWorld 传给角色和 Shadow 更新。
+- 将玩家动作、物理与落地、友方弹道、战斗判定、弹道结算、Shadow 生命周期和 prototype 复活迁入 `GameWorld::update()`。`GameScene` 只负责输入、绘制顺序、视觉反馈与存档，并保留可注入输入的 `updateWithInput()`。
+- `CombatSystem` 使用当前基础 `Enemy&` 和角色攻击 API；近战与防御范围直接读取攻击者和 Player 属性，移除系统内重复范围字段及双参数构造。`ProjectileSystem` 按当前 `Character::takeDamage()` 结算一次有效受击。
+- Player 死亡后恢复当前基础生命及动作状态，在出生点落地，并通过 `ProjectileSystem::clear()` 和 `ShadowManager::reset()` 清除上一条生命的弹道、影子和记录状态。
+- `GameScene::save()` 从 GameWorld 的 Player 读取位置、生命和朝向；快照中等级、经验和金币仍为存档格式默认值，当前 Player 已没有这些属性。
+
+### Rendering 与构建验证
+
+- `CharacterRenderer` 拆分为 `drawPlayer()`、`drawShadow()`、`drawEnemy()`，移除旧固定敌人视图和 `CharacterEffectView`；敌人刀刃绘制统一为 `drawEnemyBlade()`。HUD 不再接收无用的 Player 参数；`PlayerSpriteRenderer` 与伤害文字视图保持原有职责。
+- 使用独立的 `build-arm64/` 重新配置并构建 Apple Silicon 产物，避免旧 `build/` 中的 x86_64 CMake/Ninja 缓存；未通过修改 gameplay 源码或关闭 `-Werror` 解决架构问题。
+- 将测试迁移到当前实体、输入、Systems、GameWorld 和 GameScene API，移除依赖已删除敌人类型的测试。2026-09-16 的完整 arm64 构建成功，最新 `ctest` 为 **74/74 通过**。
 
 ## 2026-08-03：游戏流程状态
 
